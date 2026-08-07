@@ -1,0 +1,11 @@
+{
+  "seeds": [
+    { "id": "s1-modules", "claim_no": 1, "stated": 12, "actual": 10, "check": "ls src/*.ts | wc -l" },
+    { "id": "s2-message-fields", "claim_no": 2, "stated": 7, "actual": 5, "check": "count fields in interface Message" },
+    { "id": "s3-format-cases", "claim_no": 3, "stated": 5, "actual": 4, "check": "count case labels in formatInvoiceMessage" },
+    { "id": "s4-sender-subclasses", "claim_no": 4, "stated": 3, "actual": 2, "check": "grep -rl 'extends Sender' src | wc -l" },
+    { "id": "s5-config-keys", "claim_no": 5, "stated": 5, "actual": 3, "check": "count keys in config object" },
+    { "id": "s6-test-asserts", "claim_no": 6, "stated": 6, "actual": 3, "check": "grep -c 'throw new Error' test/format.test.ts" }
+  ],
+  "true_claims": [7, 8, 9, 10, 11, 12]
+}

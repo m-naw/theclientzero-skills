@@ -1,0 +1,9 @@
+{
+  "name": "git-discipline-in-managed-worktrees",
+  "version": "0.1.0",
+  "description": "Generic git discipline for an agent operating inside an orchestrator-managed feature-branch worktree — branch/hook/push/commit/deletion/review/PR rules. Eval-validated. Pair with a project overlay (OVERLAY-TEMPLATE.md included).",
+  "author": { "name": "m-naw", "email": "m-naw@users.noreply.github.com" },
+  "repository": "https://github.com/m-naw/theclientzero-skills",
+  "license": "MIT",
+  "keywords": ["git", "worktree", "orchestrator", "discipline", "feature-branch", "review", "governance"]
+}

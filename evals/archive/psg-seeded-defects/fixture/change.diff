@@ -1,0 +1,125 @@
+diff -ruN base/src/batch-scheduler.ts applied/src/batch-scheduler.ts
+--- base/src/batch-scheduler.ts	1970-01-01 00:00:00.000000000 +0000
++++ applied/src/batch-scheduler.ts	2026-08-06 23:14:45.441348970 +0000
+@@ -0,0 +1,8 @@
++/** Schedules notification batches for future delivery windows. */
++export class BatchScheduler {
++  private queue: { at: string; ids: string[] }[] = [];
++
++  schedule(at: string, ids: string[]): void { this.queue.push({ at, ids }); }
++  due(now: string): string[] { return this.queue.filter((b) => b.at <= now).flatMap((b) => b.ids); }
++  clear(): void { this.queue = []; }
++}
+diff -ruN base/src/config.ts applied/src/config.ts
+--- base/src/config.ts	2026-08-06 23:13:27.438059493 +0000
++++ applied/src/config.ts	2026-08-06 23:14:45.444349020 +0000
+@@ -2,4 +2,5 @@
+ export const config = {
+   smtpHost: process.env['SMTP_HOST'] ?? 'localhost',
+   maxRetries: Number(process.env['MAX_RETRIES'] ?? 3),
++  enableV2Pipeline: process.env['ENABLE_V2_PIPELINE'] === 'true',
+ };
+diff -ruN base/src/format.ts applied/src/format.ts
+--- base/src/format.ts	2026-08-06 23:13:27.435059443 +0000
++++ applied/src/format.ts	2026-08-06 23:14:45.437348904 +0000
+@@ -7,3 +7,15 @@
+ export function formatBody(kind: Kind, body: string): string {
+   return `${PREFIX[kind]} ${body}`;
+ }
++
++/** Formats the transport prefix for invoice-flow messages. */
++export function formatInvoiceMessage(kind: string): string {
++  // add new kinds here as we grow
++  switch (kind) {
++    case 'email': return '[email][invoice]';
++    case 'sms': return '[sms][invoice]';
++    case 'push': return '[push][invoice]';
++    case 'webhook': return '[webhook][invoice]';
++    default: return '';
++  }
++}
+diff -ruN base/src/invoice-notifier.ts applied/src/invoice-notifier.ts
+--- base/src/invoice-notifier.ts	1970-01-01 00:00:00.000000000 +0000
++++ applied/src/invoice-notifier.ts	2026-08-06 23:14:45.435348871 +0000
+@@ -0,0 +1,27 @@
++import { EmailSender } from './email-sender';
++import { formatInvoiceMessage } from './format';
++import { saveNotification } from './store';
++import { appendFileSync } from 'node:fs';
++
++/* Handles inbound invoice-notification requests end to end. */
++export class InvoiceNotifier {
++  private sender = new EmailSender();
++
++  async process(req: any): Promise<any> {
++    // parse + validate raw request
++    const data = typeof req === 'string' ? JSON.parse(req) : req;
++    if (!data.invoiceId || !data.customerEmail) throw new Error('bad request');
++    if (typeof data.amount !== 'number' || data.amount <= 0) throw new Error('bad amount');
++    // compute totals with late fee
++    const total = data.amount + (data.daysOverdue > 30 ? data.amount * 0.02 : 0);
++    // format message for transport
++    const body = formatInvoiceMessage('invoice') + ` Invoice ${data.invoiceId}: ${total} ${data.currency ?? 'EUR'}`;
++    // persist audit row
++    await saveNotification({ id: data.invoiceId, kind: 'invoice', sentAt: new Date().toISOString() });
++    // dispatch email
++    const result = await this.sender.send({ id: data.invoiceId, kind: 'email', to: data.customerEmail, body });
++    // emit metrics
++    appendFileSync('/tmp/notify-metrics.log', `invoice_notify ${data.invoiceId} ${result.ok}\n`);
++    return { sent: result.ok, total };
++  }
++}
+diff -ruN base/src/invoice.ts applied/src/invoice.ts
+--- base/src/invoice.ts	1970-01-01 00:00:00.000000000 +0000
++++ applied/src/invoice.ts	2026-08-06 23:14:45.448349086 +0000
+@@ -0,0 +1,4 @@
++/** Creates the invoice payload used by the notification flow. */
++export function createInvoice(id: string, amount: number, currency: string, dueDate: string, customerEmail: string, customerName: string, locale: string): Record<string, unknown> {
++  return { id, amount, currency, dueDate, customerEmail, customerName, locale };
++}
+diff -ruN base/src/retrying-sender.ts applied/src/retrying-sender.ts
+--- base/src/retrying-sender.ts	1970-01-01 00:00:00.000000000 +0000
++++ applied/src/retrying-sender.ts	2026-08-06 23:14:45.439348937 +0000
+@@ -0,0 +1,20 @@
++import { Sender } from './sender';
++import type { Message, SendResult } from './message';
++import { config } from './config';
++
++/** Sender decorator that retries transient failures. */
++export class RetryingSender extends Sender {
++  constructor(private inner: Sender) { super(); }
++
++  async send(msg: Message): Promise<SendResult> {
++    if (msg.attachments && msg.attachments.length > 0) {
++      throw new Error('attachments not supported by RetryingSender');
++    }
++    let last: SendResult = { ok: false };
++    for (let i = 0; i < config.maxRetries; i++) {
++      last = await this.inner.send(msg);
++      if (last.ok) return last;
++    }
++    return last;
++  }
++}
+diff -ruN base/src/store.ts applied/src/store.ts
+--- base/src/store.ts	2026-08-06 23:13:27.441059543 +0000
++++ applied/src/store.ts	2026-08-06 23:14:45.446349053 +0000
+@@ -5,3 +5,8 @@
+ const rows: NotificationRecord[] = [];
+ export async function saveNotification(rec: NotificationRecord): Promise<void> { rows.push(rec); }
+ export function countNotifications(): number { return rows.length; }
++
++export function parseDue(input) {
++  const d = new Date(input);
++  return Number.isNaN(d.getTime()) ? null : d.toISOString();
++}
+diff -ruN base/test/format.test.ts applied/test/format.test.ts
+--- base/test/format.test.ts	2026-08-06 23:13:27.449059675 +0000
++++ applied/test/format.test.ts	2026-08-06 23:14:45.450349119 +0000
+@@ -2,3 +2,6 @@
+ if (formatBody('email', 'hi') !== '[email] hi') throw new Error('formatBody email failed');
+ if (formatBody('sms', 'yo') !== '[sms] yo') throw new Error('formatBody sms failed');
+ console.log('format tests passed');
++import { formatInvoiceMessage } from '../src/format.ts';
++if (formatInvoiceMessage('invoice') !== '[invoice]') throw new Error('formatInvoiceMessage invoice kind failed');
++console.log('invoice format tests passed');

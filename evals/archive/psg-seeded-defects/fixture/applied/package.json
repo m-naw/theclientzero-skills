@@ -1,0 +1,6 @@
+{
+  "name": "notify-svc",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": { "verify": "bash verify.sh" }
+}

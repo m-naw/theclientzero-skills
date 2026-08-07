@@ -1,0 +1,14 @@
+{
+  "seeds": [
+    { "id": "srp-1", "category": "srp", "roster": "blocking", "file": "src/invoice-notifier.ts", "where": "InvoiceNotifier.process()", "description": "one method parses/validates raw request, computes totals, formats, persists audit row, dispatches email, and writes metrics — 5+ responsibilities in one unit" },
+    { "id": "ocp-1", "category": "ocp", "roster": "blocking", "file": "src/format.ts", "where": "formatInvoiceMessage()", "description": "new string-typed kind switch ('add new kinds here as we grow') beside the existing type-checked Record<Kind,string> pattern it should have extended; silently returns '' on unknown kind" },
+    { "id": "lsp-1", "category": "lsp", "roster": "blocking", "file": "src/retrying-sender.ts", "where": "RetryingSender.send()", "description": "subtype throws on attachments while the Sender contract explicitly requires accepting any valid Message and never throwing (failures = {ok:false})" },
+    { "id": "yagni-1", "category": "yagni", "roster": "blocking", "file": "src/batch-scheduler.ts", "where": "BatchScheduler", "description": "entire class has zero consumers anywhere in the tree" },
+    { "id": "yagni-2", "category": "yagni", "roster": "blocking", "file": "src/config.ts", "where": "enableV2Pipeline", "description": "config flag added but read nowhere" },
+    { "id": "typing-1", "category": "typing", "roster": "blocking", "file": "src/invoice-notifier.ts", "where": "process(req: any): Promise<any>", "description": "public API takes and returns any" },
+    { "id": "typing-2", "category": "typing", "roster": "blocking", "file": "src/store.ts", "where": "parseDue(input)", "description": "exported function with untyped parameter and no return type" },
+    { "id": "verification-1", "category": "verification", "roster": "blocking", "file": "verify.sh", "where": "bash verify.sh", "description": "verify.sh fails post-change: formatInvoiceMessage('invoice') hits the default '' branch while the new test asserts '[invoice]'" },
+    { "id": "standards-1", "category": "standards", "roster": "blocking", "file": "src/store.ts", "where": "parseDue", "description": "README binds 'explicit parameter and return types' + JSDoc on public APIs; parseDue violates both (typing-2 overlaps; standards credit if the README convention is cited)" },
+    { "id": "antipattern-1", "category": "anti-patterns", "roster": "advisory", "file": "src/invoice.ts", "where": "createInvoice(7 primitives)", "description": "primitive obsession — 7 raw primitives where a named Invoice type fits" }
+  ]
+}

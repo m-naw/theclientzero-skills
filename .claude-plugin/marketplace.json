@@ -1,0 +1,64 @@
+{
+  "name": "theclientzero",
+  "description": "TheClientZero skills marketplace \u2014 cross-project skills for high-stakes decision making: confidence protocols and generic git discipline for orchestrator-managed worktrees.",
+  "owner": {
+    "name": "m-naw",
+    "email": "m-naw@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "confidence-protocols",
+      "source": "./plugins/confidence-protocols",
+      "description": "Confidence Protocol and Principles Shipping Gate \u2014 state-based decision gating (preference gate, evidence citation, independent review) and a principled pre-merge quality gate. Eval-validated; each skill carries its falsification harness in evals/.",
+      "version": "0.1.0",
+      "author": {
+        "name": "m-naw"
+      },
+      "repository": "https://github.com/m-naw/theclientzero-skills",
+      "keywords": [
+        "confidence-protocol",
+        "decision-making",
+        "review",
+        "governance",
+        "code-quality",
+        "shipping-gate"
+      ],
+      "category": "process"
+    },
+    {
+      "name": "git-discipline-in-managed-worktrees",
+      "source": "./plugins/git-discipline-in-managed-worktrees",
+      "description": "Generic git discipline for an agent operating inside an orchestrator-managed feature-branch worktree \u2014 branch/hook/push/commit/deletion/review/PR rules. Eval-validated (baseline poisons branch lineage 4/4; with skill 0/8). Pair with a project-specific overlay (OVERLAY-TEMPLATE.md included).",
+      "version": "0.1.0",
+      "author": {
+        "name": "m-naw"
+      },
+      "repository": "https://github.com/m-naw/theclientzero-skills",
+      "keywords": [
+        "git",
+        "worktree",
+        "orchestrator",
+        "discipline",
+        "feature-branch",
+        "review",
+        "governance"
+      ],
+      "category": "process"
+    },
+    {
+      "name": "skill-observability",
+      "source": "./plugins/skill-observability",
+      "description": "PreToolUse hook that logs Skill invocations for observability and audit. Never blocks.",
+      "version": "0.1.0",
+      "author": {
+        "name": "m-naw"
+      },
+      "repository": "https://github.com/m-naw/theclientzero-skills",
+      "keywords": [
+        "observability",
+        "diagnostic"
+      ],
+      "category": "process"
+    }
+  ]
+}
