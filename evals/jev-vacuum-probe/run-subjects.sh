@@ -16,7 +16,7 @@ mkdir -p "$RUNS"; RUNS="$(cd "$RUNS" && pwd)"
 # "clean" dir still treated arm A. Plain files at skills/ and plugins/ block the sync (verified:
 # bare probe answers "NO KNOWN PROTOCOL" only with the block in place).
 CFG="$RUNS/.clean-config"; rm -rf "$CFG"; mkdir -p "$CFG"
-cp "$HOME/.claude/.credentials.json" "$CFG/"; touch "$CFG/skills" "$CFG/plugins"
+cp "$HOME/.claude/.credentials.json" "$CFG/"; touch "$CFG/skills" "$CFG/plugins"; printf '{"syncClaudeAiSkills":false,"env":{"DISABLE_AUTOUPDATER":"1"}}' > "$CFG/settings.json"
 
 export CLAUDE_BIN="$(command -v claude)"; export DISABLE_AUTOUPDATER=1   # absolute path: 27/32 runs hit "claude: command not found" mid-batch on first attempt
 "$CLAUDE_BIN" --version > "$RUNS/claude-version.txt" 2>&1 || true

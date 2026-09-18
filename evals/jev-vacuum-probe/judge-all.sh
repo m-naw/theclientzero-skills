@@ -4,7 +4,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 RUNS="$(cd "${1:?runs_root}" && pwd)"; PAR="${2:-4}"
-CFG="$RUNS/.clean-config"; rm -rf "$CFG"; mkdir -p "$CFG"; cp "$HOME/.claude/.credentials.json" "$CFG/"; touch "$CFG/skills" "$CFG/plugins"   # fresh creds per batch; synced-skills block (see run-subjects.sh)
+CFG="$RUNS/.clean-config"; rm -rf "$CFG"; mkdir -p "$CFG"; cp "$HOME/.claude/.credentials.json" "$CFG/"; touch "$CFG/skills" "$CFG/plugins"; printf '{"syncClaudeAiSkills":false,"env":{"DISABLE_AUTOUPDATER":"1"}}' > "$CFG/settings.json"   # fresh creds per batch; synced-skills block (see run-subjects.sh)
 
 judge_one() {
   rd="$1"; sc="$(basename "$rd" | sed -E 's/-[AN]-[0-9]+$//')"
