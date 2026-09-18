@@ -56,6 +56,7 @@ If a change to a skill cannot be justified under the rules that skill teaches, t
     ├── README.md                  # standing eval rules (pre-registration, degradation canary, …)
     ├── git-discipline-redteam/    # active gate
     ├── cp-vacuum-fill/            # active gate
+    ├── jev-vacuum-probe/          # non-gating probe: external classifier (Jev) vs judge — falsified
     └── archive/                   # voided + negative results, kept against publication bias
 ```
 

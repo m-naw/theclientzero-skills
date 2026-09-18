@@ -11,6 +11,7 @@ Empirical harnesses that decide whether a skill in this marketplace earns its pl
 5. **Honest small-n reporting.** Results report raw counts per arm. Decision thresholds are pre-registered in percentage points, not p-values dressed up for small samples.
 
 6. **Tier-scoped results.** All subjects, reviewers, and judges run as Claude Sonnet (the `sonnet` alias at run time, recorded per eval) unless an arm says otherwise. Every number in a FINDINGS is a claim about that tier; consumers on a different tier should re-run the harness, not inherit the numbers.
+7. **Blinding check before arm A.** A "clean" `CLAUDE_CONFIG_DIR` is not clean by construction: Claude Code 2.1.x pulls the account's claude.ai-synced skills into any config dir on login, and a fixture's git history can hand back every stripped file via `git show`. Before the first control-arm run, a bare headless probe with no fixture and the eval's config dir must answer that it knows no protocol, and the fixture must have zero grep hits for the skill under test in both tree and history. Record the probe answer in the pre-registration ledger. Found the hard way in `jev-vacuum-probe` (three leaks, three discarded batches).
 
 ## Active gates vs archive
 
