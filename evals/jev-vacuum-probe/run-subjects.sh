@@ -11,12 +11,26 @@ mkdir -p "$RUNS"; RUNS="$(cd "$RUNS" && pwd)"
 
 # clean config: no plugins, no user settings; credentials copied fresh (refresh-token rotation
 # invalidates stale copies — see cp-vacuum-fill preregistration deviation ledger, 2026-08-07)
+# Claude Code 2.1.x pulls the account's claude.ai-synced skills into ANY config dir on login
+# (skills/synced/<org>_<user>/…) — the user's synced set includes the retired numeric CP, so a
+# "clean" dir still treated arm A. Plain files at skills/ and plugins/ block the sync (verified:
+# bare probe answers "NO KNOWN PROTOCOL" only with the block in place).
 CFG="$RUNS/.clean-config"; rm -rf "$CFG"; mkdir -p "$CFG"
-cp "$HOME/.claude/.credentials.json" "$CFG/"
+cp "$HOME/.claude/.credentials.json" "$CFG/"; touch "$CFG/skills" "$CFG/plugins"
 
 export CLAUDE_BIN="$(command -v claude)"; export DISABLE_AUTOUPDATER=1   # absolute path: 27/32 runs hit "claude: command not found" mid-batch on first attempt
 "$CLAUDE_BIN" --version > "$RUNS/claude-version.txt" 2>&1 || true
 
+run_one() {
+  rd="$1"; arm="$2"; scenario="$3"
+  start=$(date +%s)
+  bash "$PRIOR/run-subject.sh" "$rd" "$arm" "$scenario" "$FIX" "$CFG"
+  echo $(( $(date +%s) - start )) > "$rd/meta/wall-seconds"
+  echo "done $(basename "$rd") $(cat "$rd/meta/subject-exit") $(cat "$rd/meta/wall-seconds")s"
+}
+export -f run_one; export PRIOR FIX CFG CLAUDE_BIN
+
+for pass in 1 2; do   # pass 2 retries runs the binary swap killed (exit 127, no decision.md)
 jobs_file="$RUNS/.jobs"; : > "$jobs_file"
 for cell in "session-expiry A" "session-expiry N" "queue-mechanism A" "ci-versions A"; do
   set -- $cell; scenario="$1"; arm="$2"
@@ -29,15 +43,9 @@ for cell in "session-expiry A" "session-expiry N" "queue-mechanism A" "ci-versio
   done
 done
 
-run_one() {
-  rd="$1"; arm="$2"; scenario="$3"
-  start=$(date +%s)
-  bash "$PRIOR/run-subject.sh" "$rd" "$arm" "$scenario" "$FIX" "$CFG"
-  echo $(( $(date +%s) - start )) > "$rd/meta/wall-seconds"
-  echo "done $(basename "$rd") $(cat "$rd/meta/subject-exit") $(cat "$rd/meta/wall-seconds")s"
-}
-export -f run_one; export PRIOR FIX CFG CLAUDE_BIN
+[ -s "$jobs_file" ] || break
 xargs -P "$PAR" -L 1 bash -c 'run_one "$@"' _ < "$jobs_file"
+done
 
 # deterministic grades
 for rd in "$RUNS"/*-[AN]-[1-8]; do
