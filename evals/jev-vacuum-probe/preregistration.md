@@ -70,3 +70,5 @@ Only this: a follow-up proposal to wire Jev as a *deterministic-ish spot-check i
 ## Deviation ledger
 
 (append-only)
+
+- 2026-09-18, before any subject probe (smoke test on a synthetic document only): the API returns no `confidence` field for Noul answers (only `noul`, a single probability). For M5/H2, Noul confidence is defined as `2 × |p − 0.5|` (0 = indifferent, 1 = certain). Threshold unchanged (0.5). Jev model id observed: `jev-1.13.0`. Smoke observation, not a result: `cites_real_source` returned 0.84 on a synthetic document containing no file path.
