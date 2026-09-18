@@ -14,7 +14,8 @@ mkdir -p "$RUNS"; RUNS="$(cd "$RUNS" && pwd)"
 CFG="$RUNS/.clean-config"; rm -rf "$CFG"; mkdir -p "$CFG"
 cp "$HOME/.claude/.credentials.json" "$CFG/"
 
-claude --version > "$RUNS/claude-version.txt" 2>&1 || true
+export CLAUDE_BIN="$(command -v claude)"; export DISABLE_AUTOUPDATER=1   # absolute path: 27/32 runs hit "claude: command not found" mid-batch on first attempt
+"$CLAUDE_BIN" --version > "$RUNS/claude-version.txt" 2>&1 || true
 
 jobs_file="$RUNS/.jobs"; : > "$jobs_file"
 for cell in "session-expiry A" "session-expiry N" "queue-mechanism A" "ci-versions A"; do
@@ -35,7 +36,7 @@ run_one() {
   echo $(( $(date +%s) - start )) > "$rd/meta/wall-seconds"
   echo "done $(basename "$rd") $(cat "$rd/meta/subject-exit") $(cat "$rd/meta/wall-seconds")s"
 }
-export -f run_one; export PRIOR FIX CFG
+export -f run_one; export PRIOR FIX CFG CLAUDE_BIN
 xargs -P "$PAR" -L 1 bash -c 'run_one "$@"' _ < "$jobs_file"
 
 # deterministic grades
