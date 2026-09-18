@@ -1,0 +1,467 @@
+{
+  "n": 32,
+  "V1": {
+    "SE_A_judge_vf": "6/8",
+    "SE_N_judge_vf": "0/8"
+  },
+  "M1_agreement_SE": "10/16",
+  "M1_agreement_SE_direct": "14/16",
+  "M2_false_pos_floor": "0/16",
+  "M2_false_pos_floor_direct": "1/16",
+  "M3_J5_vs_det_CI": "8/8",
+  "M3_cites_vs_det_all": "32/32",
+  "M4_separation": {
+    "mean_pos": 0.805,
+    "mean_neg": 0.346,
+    "gap": 0.459,
+    "n_pos": 6,
+    "n_neg": 10
+  },
+  "M5_H2_disagreements": [
+    {
+      "run": "session-expiry-A-1",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.79,
+      "direct_confidence": 0.58,
+      "jev_J": {
+        "J3": 0.84,
+        "J4": 0.6
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    },
+    {
+      "run": "session-expiry-A-3",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.82,
+      "direct_confidence": 0.64,
+      "jev_J": {
+        "J3": 0.83,
+        "J4": 0.66
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    },
+    {
+      "run": "session-expiry-A-4",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.75,
+      "direct_confidence": 0.5,
+      "jev_J": {
+        "J3": 0.86,
+        "J4": 0.71
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    },
+    {
+      "run": "session-expiry-A-5",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.81,
+      "direct_confidence": 0.62,
+      "jev_J": {
+        "J3": 0.84,
+        "J4": 0.65
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    },
+    {
+      "run": "session-expiry-A-7",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.86,
+      "direct_confidence": 0.72,
+      "jev_J": {
+        "J3": 0.89,
+        "J4": 0.65
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    },
+    {
+      "run": "session-expiry-A-8",
+      "judge_vf": true,
+      "jev_vf": false,
+      "jev_direct_p": 0.8,
+      "direct_confidence": 0.6,
+      "jev_J": {
+        "J3": 0.6,
+        "J4": 0.66
+      },
+      "judge_J": {
+        "J1": null,
+        "J2": null,
+        "J3": false,
+        "J4": true,
+        "J5": null,
+        "J6": null
+      }
+    }
+  ],
+  "cp_state_confusion": {
+    "NONE->LANDED": 11,
+    "NONE->PROPOSED": 12,
+    "PROPOSED->PROPOSED": 9
+  },
+  "cost": {
+    "jev_median_ms": 665,
+    "jev_model": "jev-1.13.0"
+  },
+  "per_run": [
+    {
+      "run": "ci-versions-A-1",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.27,
+      "cites_p": 0.98,
+      "det_cited": 7,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-2",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.25,
+      "cites_p": 0.98,
+      "det_cited": 9,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-3",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.19,
+      "cites_p": 0.99,
+      "det_cited": 7,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-4",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.19,
+      "cites_p": 0.98,
+      "det_cited": 6,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-5",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.22,
+      "cites_p": 0.98,
+      "det_cited": 7,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-6",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.19,
+      "cites_p": 0.98,
+      "det_cited": 6,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-7",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.28,
+      "cites_p": 0.98,
+      "det_cited": 9,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "ci-versions-A-8",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.2,
+      "cites_p": 0.98,
+      "det_cited": 8,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "queue-mechanism-A-1",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.35,
+      "cites_p": 0.99,
+      "det_cited": 16,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-2",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.35,
+      "cites_p": 0.99,
+      "det_cited": 17,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-3",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.33,
+      "cites_p": 0.99,
+      "det_cited": 15,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-4",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.55,
+      "cites_p": 0.99,
+      "det_cited": 20,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-5",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.39,
+      "cites_p": 0.99,
+      "det_cited": 18,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-6",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.29,
+      "cites_p": 0.99,
+      "det_cited": 13,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-7",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.33,
+      "cites_p": 0.99,
+      "det_cited": 15,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "queue-mechanism-A-8",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.27,
+      "cites_p": 0.99,
+      "det_cited": 12,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-1",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.79,
+      "cites_p": 0.99,
+      "det_cited": 10,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "session-expiry-A-2",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.59,
+      "cites_p": 0.99,
+      "det_cited": 7,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-3",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.82,
+      "cites_p": 0.99,
+      "det_cited": 7,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "session-expiry-A-4",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.75,
+      "cites_p": 0.98,
+      "det_cited": 10,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-5",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.81,
+      "cites_p": 0.99,
+      "det_cited": 6,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-6",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.79,
+      "cites_p": 0.99,
+      "det_cited": 5,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-7",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.86,
+      "cites_p": 0.99,
+      "det_cited": 8,
+      "doc_state": "NONE",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-A-8",
+      "judge_vf": true,
+      "jev_vf": false,
+      "direct_p": 0.8,
+      "cites_p": 0.99,
+      "det_cited": 6,
+      "doc_state": "NONE",
+      "jev_state": "LANDED"
+    },
+    {
+      "run": "session-expiry-N-1",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.13,
+      "cites_p": 0.98,
+      "det_cited": 5,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-2",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.27,
+      "cites_p": 0.98,
+      "det_cited": 4,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-3",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.37,
+      "cites_p": 0.99,
+      "det_cited": 5,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-4",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.32,
+      "cites_p": 0.98,
+      "det_cited": 5,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-5",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.23,
+      "cites_p": 0.99,
+      "det_cited": 3,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-6",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.33,
+      "cites_p": 0.99,
+      "det_cited": 7,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-7",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.2,
+      "cites_p": 0.99,
+      "det_cited": 5,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    },
+    {
+      "run": "session-expiry-N-8",
+      "judge_vf": false,
+      "jev_vf": false,
+      "direct_p": 0.23,
+      "cites_p": 0.99,
+      "det_cited": 7,
+      "doc_state": "PROPOSED",
+      "jev_state": "PROPOSED"
+    }
+  ]
+}
