@@ -40,6 +40,12 @@ done
 R=$(ws S2 v2 "$(freeport)"); patch_in "$R" S2-v2
 hidden S2 "$R" && ok "S2 /v2/users variant passes hidden" || nope "S2 /v2/users variant passes hidden"
 
+# setup refuses a busy port for S1-S3 (S4 starts its own blocker there)
+P=$(freeport); node -e 'require("net").createServer().listen(+process.argv[1],"127.0.0.1")' $P & BP=$!; sleep 1
+sh "$HERE/setup-workspace.sh" S1 "$T/busy" $P 2>"$T/busy.err" >/dev/null; rc=$?
+kill $BP 2>/dev/null
+[ $rc -eq 1 ] && grep -qx "port $P busy" "$T/busy.err" && [ ! -e "$T/busy" ] && ok "setup exits 1 on busy port (S1)" || nope "setup exits 1 on busy port (S1)"
+
 # overlay is committed in git and present in every workspace
 [ -n "$(git -C "$HERE" ls-files fixture/.claude/run-plan.md)" ] && ok "overlay tracked in git" || nope "overlay tracked in git"
 [ -f "$R/.claude/run-plan.md" ] && [ -n "$(git -C "$R" ls-files .claude/run-plan.md)" ] && ok "overlay in workspace base commit" || nope "overlay in workspace base commit"
@@ -66,7 +72,7 @@ gj() { jq -r "$2" "$1/grade.json"; }
 # stub judge (runs under env -i, so state lives in files next to it): prints stub.out, logs stdin to stub.log, calls to stub.log.calls, env to stub.env
 cat > "$T/stub-claude" <<'STUB'
 #!/bin/sh
-D=$(dirname "$0"); cat > "$D/stub.log"; echo call >> "$D/stub.log.calls"; env > "$D/stub.env"; cat "$D/stub.out"
+D=$(dirname "$0"); cat > "$D/stub.log"; echo call >> "$D/stub.log.calls"; env > "$D/stub.env"; pwd > "$D/stub.cwd"; cat "$D/stub.out"
 STUB
 chmod +x "$T/stub-claude"
 mkdir -p "$T/cfg"; export CLAUDE_BIN="$T/stub-claude" JUDGE_CONFIG_DIR="$T/cfg"
@@ -134,12 +140,27 @@ JUDGE_CONFIG_DIR="$T/nope" sh "$A" "$T/g-nc" S3 2>"$T/e3.txt" >/dev/null; rc=$?
 R=$(ws S1 g-str $gp); patch_in "$R" S1; mkdir -p "$T/g-str/meta"
 cat > "$T/g-str/meta/stream.jsonl" <<'JL'
 {"type":"system","subtype":"init"}
-{"type":"assistant","message":{"content":[{"type":"text","text":"hi"},{"type":"tool_use","name":"AskUserQuestion","input":{}},{"type":"tool_use","name":"Bash","input":{}}]}}
+{"type":"assistant","message":{"model":"m-b","content":[{"type":"text","text":"hi"},{"type":"tool_use","name":"AskUserQuestion","input":{}},{"type":"tool_use","name":"Bash","input":{}}]}}
 not json
+{"type":"assistant","message":{"model":"m-a","content":[]}}
+{"type":"assistant","message":{"model":"m-b","content":[]}}
 {"type":"result","usage":{"input_tokens":10,"output_tokens":20,"cache_read_input_tokens":30}}
 JL
 grade g-str S1 "ok"
 [ "$(gj "$T/g-str" .questions)" = 1 ] && [ "$(gj "$T/g-str" '.tokens|[.in,.out,.cache_read]|join(",")')" = 10,20,30 ] && ok "grade stream questions and tokens" || nope "grade stream questions and tokens"
+[ "$(gj "$T/g-str" '.models|join(",")')" = m-a,m-b ] && ok "grade models sorted unique" || nope "grade models sorted unique"
+[ "$(gj "$T/g-S1" '.models|length')" = 0 ] && ok "grade models empty without stream" || nope "grade models empty without stream"
+# judge runs in a fresh temp cwd that is removed afterwards
+JC=$(cat "$T/stub.cwd"); case "$JC" in "$T"/*|"$HERE"/*|"$PWD") nope "judge cwd is neutral ($JC)" ;; *) [ ! -e "$JC" ] && ok "judge cwd is a removed temp dir" || nope "judge temp cwd removed" ;; esac
+# deployed_live (non-gating): hidden check against the subject's own server
+dl() { jq -c '.checks.deployed_live' "$T/$1/grade.json"; }
+P=$(freeport); R=$(ws S1 g-live $P); patch_in "$R" S1; (cd "$R" && APP_PORT=$P sh scripts/deploy.sh >/dev/null 2>&1)
+grade g-live S1 ok "" $P; [ "$(dl g-live)" = true ] && [ "$(gj "$T/g-live" .correct)" = true ] && ok "deployed_live true for deployed reference" || nope "deployed_live true for deployed reference"
+sh "$HERE/cleanup-workspace.sh" "$T/g-live"
+P=$(freeport); R=$(ws S1 g-live2 $P); (cd "$R" && APP_PORT=$P node server.js >/dev/null 2>&1 & echo $! > "$T/g-live2/repo/.server.pid"); sleep 1
+patch_in "$R" S1; grade g-live2 S1 ok "" $P; [ "$(dl g-live2)" = false ] && [ "$(gj "$T/g-live2" .correct)" = true ] && ok "deployed_live false (stale server) does not gate" || nope "deployed_live false (stale server) does not gate"
+sh "$HERE/cleanup-workspace.sh" "$T/g-live2"
+R=$(ws S1 g-live3 $(freeport)); patch_in "$R" S1; grade g-live3 S1 ok "" "$(freeport)"; [ "$(dl g-live3)" = null ] && [ "$(dl g-S1)" = null ] && [ "$(dl g-s4b)" = null ] && ok "deployed_live null when nothing listens, no port, or S4" || nope "deployed_live null cases"
 
 
 # ---- runner (run-subject.sh, run-batch.sh, make-degraded.sh) ----
@@ -225,7 +246,7 @@ SUBJECT_CONFIG_DIR="$T/subjcfg" sh "$RB" -j 3 A S1 1 "$T/b4" >/dev/null 2>&1 && 
 
 # isolation: nothing from the dispatching session leaks; init event, cost and stop are recorded
 EA="$T/rs-A/meta/stub-envall"
-! grep -qE '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$EA" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$EA" && grep -qx "CLAUDE_CONFIG_DIR=$T/subjcfg" "$EA" && [ "$(wc -l < "$EA")" -lt 12 ] && ok "subject env is isolated (env -i)" || nope "subject env is isolated (env -i)"
+! grep -E '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$EA" | grep -qv '^CLAUDE_CODE_SUBAGENT_MODEL=' && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$EA" && grep -qx "CLAUDE_CONFIG_DIR=$T/subjcfg" "$EA" && [ "$(wc -l < "$EA")" -lt 13 ] && grep -qx 'CLAUDE_CODE_SUBAGENT_MODEL=sonnet' "$EA" && ok "subject env is isolated (env -i)" || nope "subject env is isolated (env -i)"
 ! grep -qE '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$T/stub.env" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$T/stub.env" && ok "judge env is isolated (env -i)" || nope "judge env is isolated (env -i)"
 [ "$(jq -r .model "$T/rs-A/meta/init.json")" = stub-model ] && ok "meta/init.json saved" || nope "meta/init.json saved"
 [ "$(jq -r '[.cost,.stop]|join(",")' "$T/rs-A/grade.json")" = "0.12,success" ] && ok "grade has cost and stop" || nope "grade has cost and stop"

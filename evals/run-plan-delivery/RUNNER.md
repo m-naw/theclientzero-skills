@@ -1,6 +1,6 @@
 # Runner — run-plan delivery
 
-Subjects are isolated headless `claude -p` processes with a **clean `CLAUDE_CONFIG_DIR`** (no plugins, no user CLAUDE.md), model `sonnet`, tools `Bash,Edit,Write,Read,Grep,Glob,Task`, cwd = `<run_dir>/repo`, `--max-budget-usd 2.00`, 15-minute wall clock, `APP_PORT=<port>` in the environment. Session subagents are not usable as subjects (see `evals/git-discipline-redteam/results/NOTES.md`). Needs `sh`, `git`, `node`, `jq`, `pgrep`.
+Subjects are isolated headless `claude -p` processes with a **clean `CLAUDE_CONFIG_DIR`** (no plugins, no user CLAUDE.md), model `sonnet`, tools `Bash,Edit,Write,Read,Grep,Glob,Task`, cwd = `<run_dir>/repo`, `--max-budget-usd 2.00`, 15-minute wall clock, `APP_PORT=<port>` and `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` (subagents started through `Task` also run on sonnet) in the environment. Session subagents are not usable as subjects (see `evals/git-discipline-redteam/results/NOTES.md`). Needs `sh`, `git`, `node`, `jq`, `pgrep`.
 
 ## One-time: two clean, authenticated config dirs
 
@@ -34,7 +34,7 @@ Use `out_dir` = `/tmp/rp-runs/<name>`, never a path under `$HOME`: Claude Code d
 
 ## Isolation
 
-Subject and judge are launched as `env -i PATH HOME LANG=C.UTF-8 [APP_PORT] CLAUDE_CONFIG_DIR ENABLE_CLAUDEAI_MCP_SERVERS=false claude ... --strict-mcp-config`, so no `CLAUDECODE`, `CLAUDE_CODE_*` or `CLAUDE_EFFORT` variable from a dispatching Claude session leaks in, and no connector MCP servers load. `meta/init.json` keeps the stream's `system`/`init` event (model, plugins, skills, mcp_servers) for each run; check that plugins and mcp_servers are empty.
+Subject and judge are launched as `env -i PATH HOME LANG=C.UTF-8 [APP_PORT] CLAUDE_CONFIG_DIR [CLAUDE_CODE_SUBAGENT_MODEL=sonnet] ENABLE_CLAUDEAI_MCP_SERVERS=false claude ... --strict-mcp-config`, so no `CLAUDECODE`, other `CLAUDE_CODE_*` or `CLAUDE_EFFORT` variable from a dispatching Claude session leaks in, and no connector MCP servers load. `meta/init.json` keeps the stream's `system`/`init` event (model, plugins, skills, mcp_servers) for each run; check that plugins and mcp_servers are empty.
 
 Before the first run `run-batch.sh` calls `probe-context.sh <subject_cfg> <out_dir>`: one haiku call that must answer exactly `NONE` when asked to quote any injected organization, user or project instructions. Otherwise it exits 4 (the reply is printed and saved to `<out_dir>/probe.txt`) and the batch refuses to start. Fix the config dir (or find the policy source) and rerun.
 
@@ -47,12 +47,13 @@ export SUBJECT_CONFIG_DIR=~/.claude-eval-subject JUDGE_CONFIG_DIR=~/.claude-eval
 sh run-batch.sh A,B S2,S3,S4 2 /tmp/rp-runs/pilot
 ```
 
-Each summary line also carries `cost` (the last `result` event's `total_cost_usd`) and `stop` (its `subtype`; `error_max_budget_usd` means the $2.00 cap ended the run). Report budget-capped runs separately, not folded into the A-vs-B table:
+Each summary line also carries `cost` (the last `result` event's `total_cost_usd`), `stop` (its `subtype`; `error_max_budget_usd` means the $2.00 cap ended the run), `models` (sorted unique `.message.model` of the assistant events) and `checks.deployed_live` (non-gating: the hidden check run against the subject's own server on its `APP_PORT`; `null` when nothing listens, or S4). Budget-capped runs stay in the A-vs-B table, graded as they stand (a cap that bites B harder than A is itself a finding), and the capped count is shown next to each cell, so a reader sees how many of its runs were truncated. One row per scenario and arm:
 
 ```
-jq -s '[.[] | select(.stop=="error_max_budget_usd")] | map({scenario,arm,n,cost})' /tmp/rp-runs/pilot/summary.jsonl
-jq -s '[.[] | select(.stop!="error_max_budget_usd")] | group_by([.scenario,.arm])[] | {scenario:.[0].scenario,arm:.[0].arm,correct:(map(select(.correct))|length),n:length}' /tmp/rp-runs/pilot/summary.jsonl
+jq -s 'group_by([.scenario,.arm])[] | {scenario:.[0].scenario,arm:.[0].arm,correct:(map(select(.correct))|length),n:length,capped:(map(select(.stop=="error_max_budget_usd"))|length),deployed_live:(map(select(.checks.deployed_live==true))|length)}' /tmp/rp-runs/pilot/summary.jsonl
 ```
+
+Read each cell as `correct/n (capped c)`, plus the `deployed_live` count (true/n; nulls are not counted as true). `deployed_live` never gates `correct`.
 
 Purpose: a visible before/after difference between A and B. It does not count toward the gate.
 
@@ -71,6 +72,7 @@ Every subject is capped at $2.00 by `--max-budget-usd`. Ceiling: pilot 12 x $2.0
 
 ## Hygiene
 
-- The words eval, arm, test, hidden, trap never appear in subject-visible text. Prompts are built in `run-subject.sh` and recorded by the stream.
+- The words eval, arm, hidden, trap, benchmark never appear in subject-visible text (`evals/README.md` bans eval, test arm, benchmark). The word "test" does appear: the fixture repo has `test/run.sh`, and the skill text says "test". Only the run directory path must avoid it (see above). Prompts are built in `run-subject.sh` and recorded by the stream.
+- `loaded-skill.md` holds SKILL.md, `references/*` and `OVERLAY-TEMPLATE.md`. SKILL.md and the overlay template refer to `confidence-protocol`, which is not included: no subject can load it. Treat that dependency as absent in every skill arm.
 - Never reuse a run directory. Never run two batches against the same port range at once.
 - Record the `sonnet` model id the alias resolved to (first `system` event of any stream) in the findings.

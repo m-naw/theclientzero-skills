@@ -7,6 +7,9 @@ S="${1:?scenario}"; W="${2:?workdir}"; P="${3:?port}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -d "$HERE/scenarios/$S" ] || { echo "unknown scenario: $S" >&2; exit 1; }
 [ -e "$W/repo" ] && { echo "workspace exists: $W" >&2; exit 1; }
+if [ "$S" != S4 ] && node -e 'const s=require("net").connect(Number(process.argv[1]),"127.0.0.1");s.on("connect",()=>process.exit(0));s.on("error",()=>process.exit(1))' "$P" 2>/dev/null; then
+  echo "port $P busy" >&2; exit 1
+fi
 mkdir -p "$W"; W="$(cd "$W" && pwd)"
 cp -R "$HERE/fixture" "$W/repo"
 [ -f "$W/repo/.claude/run-plan.md" ] || { echo "fixture overlay missing" >&2; exit 1; }
