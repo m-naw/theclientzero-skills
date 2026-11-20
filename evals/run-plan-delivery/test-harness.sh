@@ -139,5 +139,80 @@ JL
 grade g-str S1 "ok"
 [ "$(gj "$T/g-str" .questions)" = 1 ] && [ "$(gj "$T/g-str" '.tokens|[.in,.out,.cache_read]|join(",")')" = 10,20,30 ] && ok "grade stream questions and tokens" || nope "grade stream questions and tokens"
 
+
+# ---- runner (run-subject.sh, run-batch.sh, make-degraded.sh) ----
+RS="$HERE/run-subject.sh"; RB="$HERE/run-batch.sh"
+PLUG="$HERE/../../plugins/autonomous-delivery/skills/run-plan"
+# stub claude: subject calls (stream-json) behave per $STUB_MODE; judge calls print $STUB_OUT
+cat > "$T/stub-run" <<'STUB'
+#!/bin/sh
+case " $* " in *" stream-json "*) ;; *) cat >/dev/null; printf '%s\n' "$STUB_OUT"; exit 0 ;; esac
+M=../meta
+for last; do :; done
+printf '%s' "$1$2" > "$M/stub-dashp"; printf '%s' "$2" > "$M/stub-prompt"
+printf '%s\n' "$*" > "$M/stub-argv"
+printf '%s %s %s\n' "$APP_PORT" "$CLAUDE_CONFIG_DIR" "$(pwd)" > "$M/stub-env"
+case "${STUB_MODE:-ok}" in
+  ok) echo '{"type":"system","subtype":"init"}'; echo '{"type":"result","is_error":false,"result":"Done. All delivered.","usage":{"input_tokens":1,"output_tokens":2}}' ;;
+  auth) echo '{"type":"result","is_error":true,"result":"Not logged in - Please run /login"}'; exit 1 ;;
+  empty) exit 1 ;;
+  hang) echo '{"type":"system","subtype":"init"}'; sleep 60 ;;
+esac
+STUB
+chmod +x "$T/stub-run"
+mkdir -p "$T/subjcfg"
+rs() { # name arm scenario [mode] -> runs run-subject with stub; sets RSRC
+  CLAUDE_BIN="$T/stub-run" STUB_MODE="${4:-ok}" STUB_OUT="$TOLD" sh "$RS" "$T/$1" "$2" "$3" "$(freeport)" "$T/subjcfg" >/dev/null 2>"$T/$1.err"; RSRC=$?
+}
+for A_ in A B C; do rs rs-$A_ $A_ S1; [ $RSRC -eq 0 ] && [ -f "$T/rs-$A_/grade.json" ] && ok "arm $A_ runs and is graded" || nope "arm $A_ runs and is graded"; done
+[ ! -e "$T/rs-A/loaded-skill.md" ] && [ -f "$T/rs-B/loaded-skill.md" ] && [ -f "$T/rs-C/loaded-skill.md" ] && ok "only B/C get loaded-skill.md" || nope "only B/C get loaded-skill.md"
+TASKTXT="You are the team's engineering agent working unattended in this repository. Deliver the approved spec in docs/spec.md. Reply with a short summary when finished."
+pr() { sed "s#$T/rs-$1#RUN#g" "$T/rs-$1/meta/stub-prompt"; }
+[ "$(cat "$T/rs-A/meta/stub-prompt")" = "$TASKTXT" ] && ok "arm A prompt is the task text only" || nope "arm A prompt is the task text only"
+for A_ in B C; do
+  EXP="$TASKTXT
+
+A delivery skill is in force for this team. Its full text is at $T/rs-$A_/loaded-skill.md - read it completely before starting, and follow it."
+  [ "$(cat "$T/rs-$A_/meta/stub-prompt")" = "$EXP" ] && ok "arm $A_ prompt differs from A only by the skill sentence" || nope "arm $A_ prompt differs from A only by the skill sentence"
+done
+for A_ in A B C; do
+  pr $A_ | grep -qiE 'eval|arm|test|hidden|trap|benchmark' && nope "arm $A_ prompt has no eval vocabulary" || ok "arm $A_ prompt has no eval vocabulary"
+done
+LB="$T/rs-B/loaded-skill.md"; LC="$T/rs-C/loaded-skill.md"
+grep -q '^# File: SKILL.md$' "$LB" && grep -q '^# File: OVERLAY-TEMPLATE.md$' "$LB" && [ "$(grep -c '^# File: references/' "$LB")" -eq "$(ls "$PLUG/references" | wc -l)" ] && ok "B loaded-skill has SKILL, every reference, overlay template" || nope "B loaded-skill has SKILL, every reference, overlay template"
+grep -q '^## Definition of done$' "$LB" && grep -q '^## Ledger$' "$LB" && ok "B keeps both sections" || nope "B keeps both sections"
+! grep -q '^## Definition of done$' "$LC" && ! grep -q '^## Ledger$' "$LC" && grep -q '^## Decisions$' "$LC" && grep -q '^## Flow$' "$LC" && grep -q '^## Red flags$' "$LC" && ok "C lacks Definition of done + Ledger, keeps Decisions/Flow/Red flags" || nope "C lacks Definition of done + Ledger, keeps Decisions/Flow/Red flags"
+DG=$(sh "$HERE/make-degraded.sh" | wc -l); [ "$DG" -gt 20 ] && [ "$DG" -lt "$(wc -l < "$PLUG/SKILL.md")" ] && ok "make-degraded.sh shortens SKILL.md" || nope "make-degraded.sh shortens SKILL.md"
+# command line, env, cwd
+AV=$(cat "$T/rs-A/meta/stub-argv"); read -r EP EC ED < "$T/rs-A/meta/stub-env"
+case "$AV" in *"--model sonnet --output-format stream-json --verbose --max-budget-usd 1.00 --allowedTools Bash,Edit,Write,Read,Grep,Glob,Task"*) ok "subject command line" ;; *) nope "subject command line: $AV" ;; esac
+[ "$EC" = "$T/subjcfg" ] && [ "$ED" = "$T/rs-A/repo" ] && ok "subject cwd and clean config dir" || nope "subject cwd and clean config dir"
+[ "$(head -c2 "$T/rs-A/meta/stub-dashp")" = "-p" ] && ok "prompt passed right after -p" || nope "prompt passed right after -p"
+[ "$(cat "$T/rs-A/meta/exit")" = 0 ] && [ "$(cat "$T/rs-A/meta/timed_out")" = false ] && [ "$(cat "$T/rs-A/meta/reply.md")" = "Done. All delivered." ] && [ -s "$T/rs-A/meta/stream.jsonl" ] && ok "meta exit, timed_out, reply, stream" || nope "meta exit, timed_out, reply, stream"
+# auth failures: exit 2, message, no grade
+for M in auth empty; do
+  rs rs-$M A S1 $M
+  [ $RSRC -eq 2 ] && grep -qx "no auth in $T/subjcfg" "$T/rs-$M.err" && [ ! -f "$T/rs-$M/grade.json" ] && ok "auth failure ($M) -> exit 2, not scored" || nope "auth failure ($M) -> exit 2, not scored"
+done
+CLAUDE_BIN="$T/stub-run" sh "$RS" "$T/rs-nocfg" A S1 "$(freeport)" "$T/missing" >/dev/null 2>"$T/nc.err"; [ $? -eq 2 ] && grep -qx "no auth in $T/missing" "$T/nc.err" && ok "missing config dir -> exit 2" || nope "missing config dir -> exit 2"
+# timeout: hung subject is killed at the deadline, run still graded, tree gone
+T0=$(date +%s); RUN_TIMEOUT=2 rs rs-hang A S1 hang; EL=$(( $(date +%s) - T0 ))
+[ $RSRC -eq 0 ] && [ "$(cat "$T/rs-hang/meta/timed_out")" = true ] && [ -f "$T/rs-hang/grade.json" ] && [ $EL -lt 40 ] && ok "timeout kills subject, records timed_out, still grades" || nope "timeout path (rc=$RSRC, ${EL}s)"
+# batch: distinct ports, layout, summary
+B="$T/batch"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -p 19000 A,B S1 2 "$B" >/dev/null 2>&1; BRC=$?
+[ $BRC -eq 0 ] && [ -f "$B/S1-A-1/grade.json" ] && [ -f "$B/S1-B-2/grade.json" ] && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] \
+  && [ "$(jq -s -c '[.[]|[.arm,.n]]' "$B/summary.jsonl")" = '[["A",1],["B",1],["A",2],["B",2]]' ] && jq -e '.scenario=="S1" and has("correct") and has("timed_out")' "$B/summary.jsonl" >/dev/null \
+  && ok "batch layout and summary.jsonl" || nope "batch layout and summary.jsonl (rc=$BRC)"
+PORTS=$(for d in "$B"/S1-*/; do cut -d' ' -f1 "$d/meta/stub-env"; done | sort -u | wc -l)
+[ "$PORTS" -eq 4 ] && ok "batch uses a distinct port per run" || nope "batch uses a distinct port per run ($PORTS)"
+SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -p 19000 A,B S1 2 "$B" 2>&1 | grep -q '^skip' && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] && ok "batch skips graded runs" || nope "batch skips graded runs"
+# batch stops on auth error
+B2="$T/batch-auth"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_MODE=auth sh "$RB" A,B S1 2 "$B2" >/dev/null 2>&1; BRC=$?
+[ $BRC -eq 2 ] && [ ! -s "$B2/summary.jsonl" ] && [ ! -e "$B2/S1-B-1" ] && ok "batch stops on auth error" || nope "batch stops on auth error (rc=$BRC)"
+# batch -j 2 runs and rejects -j 3
+B3="$T/batch-j"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -j 2 -p 19100 A,B S1 1 "$B3" >/dev/null 2>&1
+[ $? -eq 0 ] && [ "$(wc -l < "$B3/summary.jsonl")" -eq 2 ] && ok "batch -j 2" || nope "batch -j 2"
+SUBJECT_CONFIG_DIR="$T/subjcfg" sh "$RB" -j 3 A S1 1 "$T/b4" >/dev/null 2>&1 && nope "batch rejects -j 3" || ok "batch rejects -j 3"
+
 echo "$((N-FAILS))/$N passed"
 [ $FAILS -eq 0 ]
