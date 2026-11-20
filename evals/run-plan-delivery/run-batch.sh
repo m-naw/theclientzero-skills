@@ -1,9 +1,10 @@
 #!/bin/sh
 # Run a grid of subjects sequentially (or 2 at a time with -j 2).
-# Usage: run-batch.sh [-j 1|2] [-p base_port] <arms A,B,C> <scenarios S1,S2,..> <n> <out_dir>
+# Usage: run-batch.sh [-j 1|2] [-p base_port] <arms A,B,C> <scenarios S1,S2,..> <n> <out_dir>  (out_dir: use /tmp/rp-runs/<name>, never under $HOME)
 # Env: SUBJECT_CONFIG_DIR and JUDGE_CONFIG_DIR (both required, clean and authenticated), plus run-subject.sh's env.
 # Run i gets port base_port+i (default base 18400). Run dirs: <out_dir>/<scenario>-<arm>-<n>/ (skipped if graded already).
-# One line per graded run is appended to <out_dir>/summary.jsonl: grade.json plus arm, n, timed_out.
+# One line per graded run is appended to <out_dir>/summary.jsonl: grade.json (incl. cost, stop) plus arm, n, timed_out.
+# Before the first run, probe-context.sh checks SUBJECT_CONFIG_DIR injects nothing (exit 4 refuses to start). Ungraded leftover run dirs are removed and retried.
 # Stops the batch on exit 2 (no auth) or 3 (judge error) of any run. Exit 0 if all runs graded, else the stop code or 1.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -16,10 +17,13 @@ for v in SUBJECT_CONFIG_DIR JUDGE_CONFIG_DIR; do
   eval "d=\${$v:-}"; [ -n "$d" ] && [ -d "$d" ] || { echo "no auth in ${d:-<$v unset>}" >&2; exit 2; }
 done
 mkdir -p "$OUT_ARG"; OUT="$(cd "$OUT_ARG" && pwd)"
+case "$OUT" in "$HOME"/*) echo "warning: out_dir under \$HOME; ancestor CLAUDE.md files can leak into subjects - use /tmp/rp-runs/<name>" >&2 ;; esac
+sh "$HERE/probe-context.sh" "$SUBJECT_CONFIG_DIR" "$OUT" || { echo "context probe failed for $SUBJECT_CONFIG_DIR (see $OUT/probe.txt)" >&2; exit 4; }
 
 run_one() { # idx scenario arm rep
   d="$OUT/$2-$3-$4"
   [ -f "$d/grade.json" ] && { echo "skip $d"; return 0; }
+  if [ -e "$d" ]; then sh "$HERE/cleanup-workspace.sh" "$d"; rm -rf "$d"; fi
   sh "$HERE/run-subject.sh" "$d" "$3" "$2" "$((BASE+$1))" "$SUBJECT_CONFIG_DIR" </dev/null > "$d.log" 2>&1; rc=$?
   if [ $rc -eq 0 ]; then
     jq -c --arg arm "$3" --argjson n "$4" --argjson t "$(cat "$d/meta/timed_out")" '. + {arm:$arm,n:$n,timed_out:$t}' "$d/grade.json" >> "$OUT/summary.jsonl"

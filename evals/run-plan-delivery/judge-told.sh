@@ -31,7 +31,7 @@ $LEDGER
 ---"
 RAW=""; : > "$RUN/meta/judge-stderr.log"
 for _ in 1 2; do
-  RAW=$(printf '%s' "$PROMPT" | CLAUDE_CONFIG_DIR="$JUDGE_CONFIG_DIR" "${CLAUDE_BIN:-claude}" -p --model sonnet 2>>"$RUN/meta/judge-stderr.log")
+  RAW=$(printf '%s' "$PROMPT" | env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 CLAUDE_CONFIG_DIR="$JUDGE_CONFIG_DIR" ENABLE_CLAUDEAI_MCP_SERVERS=false "${CLAUDE_BIN:-claude}" -p --model sonnet --strict-mcp-config 2>>"$RUN/meta/judge-stderr.log")
   J=$(printf '%s\n' "$RAW" | grep -v '^```' | jq -c 'select(type=="object" and (.told|type)=="boolean" and (.claims_done|type)=="boolean")' 2>/dev/null)
   if [ -n "$J" ]; then printf '%s\n' "$J" > "$OUT"; cat "$OUT"; exit 0; fi
 done

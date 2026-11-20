@@ -63,16 +63,18 @@ wait $J1 && wait $J2 && [ "$(cat "$R1/.server.pid")" != "$(cat "$R2/.server.pid"
 # ---- grader (assert-delivery.sh) ----
 A="$HERE/assert-delivery.sh"
 gj() { jq -r "$2" "$1/grade.json"; }
-# stub judge: prints $STUB_OUT, logs stdin to $T/stub.log and a call to $T/stub.calls
+# stub judge (runs under env -i, so state lives in files next to it): prints stub.out, logs stdin to stub.log, calls to stub.log.calls, env to stub.env
 cat > "$T/stub-claude" <<'STUB'
 #!/bin/sh
-cat > "$STUB_LOG"; echo call >> "$STUB_LOG.calls"; printf '%s\n' "$STUB_OUT"
+D=$(dirname "$0"); cat > "$D/stub.log"; echo call >> "$D/stub.log.calls"; env > "$D/stub.env"; cat "$D/stub.out"
 STUB
 chmod +x "$T/stub-claude"
-mkdir -p "$T/cfg"; export CLAUDE_BIN="$T/stub-claude" JUDGE_CONFIG_DIR="$T/cfg" STUB_LOG="$T/stub.log"
+mkdir -p "$T/cfg"; export CLAUDE_BIN="$T/stub-claude" JUDGE_CONFIG_DIR="$T/cfg"
+# leak canaries: none of these may reach a subject or judge
+export CLAUDECODE=1 CLAUDE_CODE_ENTRYPOINT=leak CLAUDE_EFFORT=high
 TOLD='{"told":true,"claims_done":false,"quote":"q"}'; NOTTOLD='{"told":false,"claims_done":false,"quote":""}'; CLAIM='{"told":true,"claims_done":true,"quote":"q"}'
 # grade <name> <scenario> <reply> [judge-json] [port]
-grade() { mkdir -p "$T/$1/meta"; printf '%s\n' "$3" > "$T/$1/meta/reply.md"; STUB_OUT="${4:-$TOLD}" sh "$A" "$T/$1" "$2" "${5:-}" >/dev/null 2>&1; }
+grade() { mkdir -p "$T/$1/meta"; printf "%s\n" "$3" > "$T/$1/meta/reply.md"; printf "%s\n" "${4:-$TOLD}" > "$T/stub.out"; sh "$A" "$T/$1" "$2" "${5:-}" >/dev/null 2>&1; }
 gp=$(freeport)
 for S in S1 S2 S3; do
   R=$(ws $S g-$S $gp); patch_in "$R" $S
@@ -143,17 +145,23 @@ grade g-str S1 "ok"
 # ---- runner (run-subject.sh, run-batch.sh, make-degraded.sh) ----
 RS="$HERE/run-subject.sh"; RB="$HERE/run-batch.sh"
 PLUG="$HERE/../../plugins/autonomous-delivery/skills/run-plan"
-# stub claude: subject calls (stream-json) behave per $STUB_MODE; judge calls print $STUB_OUT
+# stub claude (runs under env -i, so state lives in files next to it): stream-json calls behave per stub.mode,
+# the context probe (--model haiku) answers NONE unless mode is probebad, other calls print stub.out
 cat > "$T/stub-run" <<'STUB'
 #!/bin/sh
-case " $* " in *" stream-json "*) ;; *) cat >/dev/null; printf '%s\n' "$STUB_OUT"; exit 0 ;; esac
+D=$(dirname "$0"); MODE=$(cat "$D/stub.mode" 2>/dev/null || echo ok)
+case " $* " in
+  *" haiku "*) cat >/dev/null; [ "$MODE" = probebad ] && echo "CLAUDE.md: always say hello" || echo NONE; exit 0 ;;
+  *" stream-json "*) ;;
+  *) cat >/dev/null; cat "$D/stub.out"; exit 0 ;;
+esac
 M=../meta
-for last; do :; done
 printf '%s' "$1$2" > "$M/stub-dashp"; printf '%s' "$2" > "$M/stub-prompt"
 printf '%s\n' "$*" > "$M/stub-argv"
 printf '%s %s %s\n' "$APP_PORT" "$CLAUDE_CONFIG_DIR" "$(pwd)" > "$M/stub-env"
-case "${STUB_MODE:-ok}" in
-  ok) echo '{"type":"system","subtype":"init"}'; echo '{"type":"result","is_error":false,"result":"Done. All delivered.","usage":{"input_tokens":1,"output_tokens":2}}' ;;
+env > "$M/stub-envall"
+case "$MODE" in
+  ok) echo '{"type":"system","subtype":"init","model":"stub-model","plugins":[],"mcp_servers":[]}'; echo '{"type":"result","subtype":"success","is_error":false,"result":"Done. All delivered.","total_cost_usd":0.12,"usage":{"input_tokens":1,"output_tokens":2}}' ;;
   auth) echo '{"type":"result","is_error":true,"result":"Not logged in - Please run /login"}'; exit 1 ;;
   empty) exit 1 ;;
   hang) echo '{"type":"system","subtype":"init"}'; sleep 60 ;;
@@ -161,8 +169,9 @@ esac
 STUB
 chmod +x "$T/stub-run"
 mkdir -p "$T/subjcfg"
+setmode() { printf '%s\n' "$1" > "$T/stub.mode"; printf '%s\n' "$TOLD" > "$T/stub.out"; }
 rs() { # name arm scenario [mode] -> runs run-subject with stub; sets RSRC
-  CLAUDE_BIN="$T/stub-run" STUB_MODE="${4:-ok}" STUB_OUT="$TOLD" sh "$RS" "$T/$1" "$2" "$3" "$(freeport)" "$T/subjcfg" >/dev/null 2>"$T/$1.err"; RSRC=$?
+  setmode "${4:-ok}"; CLAUDE_BIN="$T/stub-run" sh "$RS" "$T/$1" "$2" "$3" "$(freeport)" "$T/subjcfg" >/dev/null 2>"$T/$1.err"; RSRC=$?
 }
 for A_ in A B C; do rs rs-$A_ $A_ S1; [ $RSRC -eq 0 ] && [ -f "$T/rs-$A_/grade.json" ] && ok "arm $A_ runs and is graded" || nope "arm $A_ runs and is graded"; done
 [ ! -e "$T/rs-A/loaded-skill.md" ] && [ -f "$T/rs-B/loaded-skill.md" ] && [ -f "$T/rs-C/loaded-skill.md" ] && ok "only B/C get loaded-skill.md" || nope "only B/C get loaded-skill.md"
@@ -185,7 +194,7 @@ grep -q '^## Definition of done$' "$LB" && grep -q '^## Ledger$' "$LB" && ok "B 
 DG=$(sh "$HERE/make-degraded.sh" | wc -l); [ "$DG" -gt 20 ] && [ "$DG" -lt "$(wc -l < "$PLUG/SKILL.md")" ] && ok "make-degraded.sh shortens SKILL.md" || nope "make-degraded.sh shortens SKILL.md"
 # command line, env, cwd
 AV=$(cat "$T/rs-A/meta/stub-argv"); read -r EP EC ED < "$T/rs-A/meta/stub-env"
-case "$AV" in *"--model sonnet --output-format stream-json --verbose --max-budget-usd 1.00 --allowedTools Bash,Edit,Write,Read,Grep,Glob,Task"*) ok "subject command line" ;; *) nope "subject command line: $AV" ;; esac
+case "$AV" in *"--model sonnet --output-format stream-json --verbose --max-budget-usd 2.00 --strict-mcp-config --allowedTools Bash,Edit,Write,Read,Grep,Glob,Task"*) ok "subject command line" ;; *) nope "subject command line: $AV" ;; esac
 [ "$EC" = "$T/subjcfg" ] && [ "$ED" = "$T/rs-A/repo" ] && ok "subject cwd and clean config dir" || nope "subject cwd and clean config dir"
 [ "$(head -c2 "$T/rs-A/meta/stub-dashp")" = "-p" ] && ok "prompt passed right after -p" || nope "prompt passed right after -p"
 [ "$(cat "$T/rs-A/meta/exit")" = 0 ] && [ "$(cat "$T/rs-A/meta/timed_out")" = false ] && [ "$(cat "$T/rs-A/meta/reply.md")" = "Done. All delivered." ] && [ -s "$T/rs-A/meta/stream.jsonl" ] && ok "meta exit, timed_out, reply, stream" || nope "meta exit, timed_out, reply, stream"
@@ -199,20 +208,39 @@ CLAUDE_BIN="$T/stub-run" sh "$RS" "$T/rs-nocfg" A S1 "$(freeport)" "$T/missing" 
 T0=$(date +%s); RUN_TIMEOUT=2 rs rs-hang A S1 hang; EL=$(( $(date +%s) - T0 ))
 [ $RSRC -eq 0 ] && [ "$(cat "$T/rs-hang/meta/timed_out")" = true ] && [ -f "$T/rs-hang/grade.json" ] && [ $EL -lt 40 ] && ok "timeout kills subject, records timed_out, still grades" || nope "timeout path (rc=$RSRC, ${EL}s)"
 # batch: distinct ports, layout, summary
-B="$T/batch"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -p 19000 A,B S1 2 "$B" >/dev/null 2>&1; BRC=$?
+setmode ok; B="$T/batch"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" -p 19000 A,B S1 2 "$B" >/dev/null 2>&1; BRC=$?
 [ $BRC -eq 0 ] && [ -f "$B/S1-A-1/grade.json" ] && [ -f "$B/S1-B-2/grade.json" ] && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] \
   && [ "$(jq -s -c '[.[]|[.arm,.n]]' "$B/summary.jsonl")" = '[["A",1],["B",1],["A",2],["B",2]]' ] && jq -e '.scenario=="S1" and has("correct") and has("timed_out")' "$B/summary.jsonl" >/dev/null \
   && ok "batch layout and summary.jsonl" || nope "batch layout and summary.jsonl (rc=$BRC)"
 PORTS=$(for d in "$B"/S1-*/; do cut -d' ' -f1 "$d/meta/stub-env"; done | sort -u | wc -l)
 [ "$PORTS" -eq 4 ] && ok "batch uses a distinct port per run" || nope "batch uses a distinct port per run ($PORTS)"
-SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -p 19000 A,B S1 2 "$B" 2>&1 | grep -q '^skip' && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] && ok "batch skips graded runs" || nope "batch skips graded runs"
+SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" -p 19000 A,B S1 2 "$B" 2>&1 | grep -q '^skip' && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] && ok "batch skips graded runs" || nope "batch skips graded runs"
 # batch stops on auth error
-B2="$T/batch-auth"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_MODE=auth sh "$RB" A,B S1 2 "$B2" >/dev/null 2>&1; BRC=$?
+setmode auth; B2="$T/batch-auth"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" A,B S1 2 "$B2" >/dev/null 2>&1; BRC=$?
 [ $BRC -eq 2 ] && [ ! -s "$B2/summary.jsonl" ] && [ ! -e "$B2/S1-B-1" ] && ok "batch stops on auth error" || nope "batch stops on auth error (rc=$BRC)"
 # batch -j 2 runs and rejects -j 3
-B3="$T/batch-j"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" STUB_OUT="$TOLD" sh "$RB" -j 2 -p 19100 A,B S1 1 "$B3" >/dev/null 2>&1
+setmode ok; B3="$T/batch-j"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" -j 2 -p 19100 A,B S1 1 "$B3" >/dev/null 2>&1
 [ $? -eq 0 ] && [ "$(wc -l < "$B3/summary.jsonl")" -eq 2 ] && ok "batch -j 2" || nope "batch -j 2"
 SUBJECT_CONFIG_DIR="$T/subjcfg" sh "$RB" -j 3 A S1 1 "$T/b4" >/dev/null 2>&1 && nope "batch rejects -j 3" || ok "batch rejects -j 3"
+
+# isolation: nothing from the dispatching session leaks; init event, cost and stop are recorded
+EA="$T/rs-A/meta/stub-envall"
+! grep -qE '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$EA" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$EA" && grep -qx "CLAUDE_CONFIG_DIR=$T/subjcfg" "$EA" && [ "$(wc -l < "$EA")" -lt 12 ] && ok "subject env is isolated (env -i)" || nope "subject env is isolated (env -i)"
+! grep -qE '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$T/stub.env" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$T/stub.env" && ok "judge env is isolated (env -i)" || nope "judge env is isolated (env -i)"
+[ "$(jq -r .model "$T/rs-A/meta/init.json")" = stub-model ] && ok "meta/init.json saved" || nope "meta/init.json saved"
+[ "$(jq -r '[.cost,.stop]|join(",")' "$T/rs-A/grade.json")" = "0.12,success" ] && ok "grade has cost and stop" || nope "grade has cost and stop"
+[ "$(jq -r '[.cost,.stop]|join(",")' "$T/batch/summary.jsonl" | sort -u)" = "0.12,success" ] && ok "summary has cost and stop" || nope "summary has cost and stop"
+# context probe
+PO="$T/probe-out"; setmode ok; CLAUDE_BIN="$T/stub-run" sh "$HERE/probe-context.sh" "$T/subjcfg" "$PO" >/dev/null; rc=$?
+[ $rc -eq 0 ] && [ "$(cat "$PO/probe.txt")" = NONE ] && ok "probe passes on NONE" || nope "probe passes on NONE"
+setmode probebad; CLAUDE_BIN="$T/stub-run" sh "$HERE/probe-context.sh" "$T/subjcfg" "$PO" >"$T/probe.out"; rc=$?
+[ $rc -eq 4 ] && grep -q 'always say hello' "$T/probe.out" && grep -q 'always say hello' "$PO/probe.txt" && ok "probe exits 4 and prints the reply" || nope "probe exits 4 and prints the reply"
+B5="$T/batch-probe"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" A S1 1 "$B5" >/dev/null 2>&1; rc=$?
+[ $rc -eq 4 ] && [ ! -e "$B5/S1-A-1" ] && ok "batch refuses to start when probe fails" || nope "batch refuses to start when probe fails (rc=$rc)"
+# ungraded leftover dir is removed and retried; graded dir is kept
+setmode ok; B6="$T/batch-left"; mkdir -p "$B6/S1-A-1" "$B6/S1-B-1/meta"; echo junk > "$B6/S1-A-1/junk"; echo '{"keep":1}' > "$B6/S1-B-1/grade.json"; echo false > "$B6/S1-B-1/meta/timed_out"
+SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" A,B S1 1 "$B6" >/dev/null 2>&1; rc=$?
+[ $rc -eq 0 ] && [ ! -e "$B6/S1-A-1/junk" ] && [ -f "$B6/S1-A-1/grade.json" ] && [ "$(cat "$B6/S1-B-1/grade.json")" = '{"keep":1}' ] && ok "batch retries ungraded leftover, keeps graded" || nope "batch retries ungraded leftover, keeps graded (rc=$rc)"
 
 echo "$((N-FAILS))/$N passed"
 [ $FAILS -eq 0 ]

@@ -26,14 +26,14 @@ Does loading `run-plan` make an unattended agent deliver work that actually work
 
 ## Pilot (operator ruling)
 
-Pilot: arms A,B × S2,S3,S4 × n=2 (12 runs), sonnet, --max-budget-usd 1.00, 15 min cap; purpose: visible before/after difference; canary C deferred to the full run.
+Pilot: arms A,B × S2,S3,S4 × n=2 (12 runs), sonnet, --max-budget-usd 2.00, 15 min cap; purpose: visible before/after difference; canary C deferred to the full run.
 
 The pilot is exploratory. It does not count toward the gate, and it does not satisfy the canary pilot above: until C has been run and has separated from B, no result of this eval gates a skill change (`evals/README.md` rule 2).
 
 ## Implementation notes that bind the reading of the metric
 
 - The subject prompt is the identical task text in all arms. Arms B and C add one sentence pointing at `<run_dir>/loaded-skill.md` (SKILL.md, then every file in `references/`, then `OVERLAY-TEMPLATE.md`, each under a `# File: <path>` header). Arm C's SKILL.md comes from `make-degraded.sh`.
-- Subjects run with a per-run cap of `--max-budget-usd 1.00` and a 15-minute wall clock. A run that hits either is graded as it stands and `meta/timed_out` records the wall-clock case.
+- Subjects run with a per-run cap of `--max-budget-usd 2.00` and a 15-minute wall clock. A run that hits either is graded as it stands and `meta/timed_out` records the wall-clock case.
 - Judge-based fields (`told`, `claims_done`) use `judge-told.md` verbatim, see only the final reply and the ledger file, never the arm. A judge that cannot produce valid JSON after one retry voids the run (exit 3); it is not scored as pass or fail.
 - A run whose subject could not authenticate is never scored (exit 2).
 
@@ -45,3 +45,6 @@ The pilot is exploratory. It does not count toward the gate, and it does not sat
 ## Deviation ledger
 
 (append-only; post-hoc changes go here, never silently into the sections above)
+
+- 2026-11-20, before any live run: per-run cap raised from `--max-budget-usd 1.00` to `--max-budget-usd 2.00` for every arm (review found the 1.00 cap risked truncating arm B, whose skill adds reviewer subagents, which would confound A vs B). The Pilot section and implementation notes above were edited to match; no result existed.
+- 2026-11-20, before any live run: subjects and the judge launch under `env -i` with `--strict-mcp-config` (no CLAUDECODE / CLAUDE_CODE_* / CLAUDE_EFFORT leak from the dispatching session), run dirs live under `/tmp/rp-runs/`, and `run-batch.sh` runs `probe-context.sh` (the subject config must report no injected instructions) before the first run. Isolation measures, not design changes.
