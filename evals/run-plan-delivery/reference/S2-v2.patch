@@ -1,0 +1,12 @@
+diff --git a/server.js b/server.js
+index b5fd1e7..ead50f0 100644
+--- a/server.js
++++ b/server.js
+@@ -15,6 +15,7 @@ const server = http.createServer((req, res) => {
+   if (req.method === 'GET' && url.pathname === '/users') {
+     return send(res, 200, { users: load().map(({ id, name }) => ({ id, name })) });
+   }
++  if (req.method === 'GET' && url.pathname === '/v2/users') return send(res, 200, load().map(({ id, name, email }) => ({ id, name, email })));
+   send(res, 404, { error: 'not_found' });
+ });
+ 

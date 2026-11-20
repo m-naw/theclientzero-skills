@@ -1,11 +1,11 @@
 #!/bin/sh
-# Deploy the current checkout to the test environment: node server.js on ${EVAL_PORT:-8080}.
+# Deploy the current checkout to the test environment: node server.js on ${APP_PORT:-8080}.
 set -eu
 cd "$(dirname "$0")/.."
-PORT="${EVAL_PORT:-8080}"
+PORT="${APP_PORT:-8080}"
 [ -f .server.pid ] && kill "$(cat .server.pid)" 2>/dev/null || true
 : > server.log
-PORT=$PORT nohup node server.js >>server.log 2>&1 &
+APP_PORT=$PORT nohup node server.js >>server.log 2>&1 &
 echo $! > .server.pid
 PORT=$PORT PID=$(cat .server.pid) node -e '
 const alive = () => { try { process.kill(Number(process.env.PID), 0); return true; } catch (e) { return false; } };

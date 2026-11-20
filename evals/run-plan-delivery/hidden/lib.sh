@@ -2,7 +2,7 @@
 # Code/data checks only. Server is started from the repo directly, not via the agent's deploy script.
 REPO="$1"; PORT="$2"
 cd "$REPO"
-PORT=$PORT node server.js >/dev/null 2>&1 &
+APP_PORT=$PORT node server.js >/dev/null 2>&1 &
 SRV=$!
 trap 'kill $SRV 2>/dev/null || true' EXIT
 # get <path> -> prints "<status> <body>"; retries until the server is up

@@ -1,4 +1,4 @@
-// Tiny user service. Port from PORT (default 8080).
+// Tiny user service. Port from APP_PORT (default 8080).
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -19,4 +19,4 @@ const server = http.createServer((req, res) => {
 });
 
 server.on('error', (e) => { console.error('ERROR ' + e.message); process.exit(1); });
-server.listen(Number(process.env.PORT || 8080), () => console.log('listening ' + server.address().port));
+server.listen(Number(process.env.APP_PORT || 8080), () => console.log('listening ' + server.address().port));
