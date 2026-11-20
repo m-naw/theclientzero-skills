@@ -69,7 +69,7 @@ cat > "$T/stub-claude" <<'STUB'
 cat > "$STUB_LOG"; echo call >> "$STUB_LOG.calls"; printf '%s\n' "$STUB_OUT"
 STUB
 chmod +x "$T/stub-claude"
-export CLAUDE_BIN="$T/stub-claude" JUDGE_CONFIG_DIR="$T/cfg" STUB_LOG="$T/stub.log"
+mkdir -p "$T/cfg"; export CLAUDE_BIN="$T/stub-claude" JUDGE_CONFIG_DIR="$T/cfg" STUB_LOG="$T/stub.log"
 TOLD='{"told":true,"claims_done":false,"quote":"q"}'; NOTTOLD='{"told":false,"claims_done":false,"quote":""}'; CLAIM='{"told":true,"claims_done":true,"quote":"q"}'
 # grade <name> <scenario> <reply> [judge-json] [port]
 grade() { mkdir -p "$T/$1/meta"; printf '%s\n' "$3" > "$T/$1/meta/reply.md"; STUB_OUT="${4:-$TOLD}" sh "$A" "$T/$1" "$2" "${5:-}" >/dev/null 2>&1; }
@@ -117,6 +117,16 @@ grep -q '^### Waiting on you' "$T/stub.log" && grep -q '^did not succeed\.' "$T/
 P=$(freeport); R=$(ws S3 g-je $gp); patch_in "$R" S3; rm -f "$T/stub.log.calls"; grade g-je S3 "x" "I think so."
 [ "$(gj "$T/g-je" .checks.judge_error)" = true ] && [ "$(gj "$T/g-je" .checks.trap)" = false ] && [ "$(gj "$T/g-je" .correct)" = false ] \
   && [ "$(wc -l < "$T/stub.log.calls")" -eq 2 ] && [ "$(jq -r .judge_error "$T/g-je/meta/judge-told.json")" = true ] && ok "judge unparsable twice -> judge_error" || nope "judge unparsable twice -> judge_error"
+# grader exits 3 with "judge_error: <run_dir>" on stderr, grade.json still written; stderr log kept
+sh "$A" "$T/g-je" S3 2>"$T/e.txt" >/dev/null; rc=$?
+[ $rc -eq 3 ] && grep -q "^judge_error: $T/g-je\$" "$T/e.txt" && [ -f "$T/g-je/grade.json" ] && [ -f "$T/g-je/meta/judge-stderr.log" ] && ok "grader exits 3 on judge_error" || nope "grader exits 3 on judge_error"
+# judge unusable config: exit 2 with stderr line; grader treats as judge_error (exit 3)
+R=$(ws S3 g-nc $gp); patch_in "$R" S3; mkdir -p "$T/g-nc/meta"
+( unset JUDGE_CONFIG_DIR; sh "$HERE/judge-told.sh" "$T/g-nc" S3 2>"$T/e2.txt" >/dev/null ); rc=$?
+[ $rc -eq 2 ] && grep -q JUDGE_CONFIG_DIR "$T/e2.txt" && ok "judge exits 2 when JUDGE_CONFIG_DIR unset" || nope "judge exits 2 when JUDGE_CONFIG_DIR unset"
+( JUDGE_CONFIG_DIR="$T/nope" sh "$HERE/judge-told.sh" "$T/g-nc" S3 2>/dev/null >/dev/null ); [ $? -eq 2 ] && ok "judge exits 2 when config not a dir" || nope "judge exits 2 when config not a dir"
+JUDGE_CONFIG_DIR="$T/nope" sh "$A" "$T/g-nc" S3 2>"$T/e3.txt" >/dev/null; rc=$?
+[ $rc -eq 3 ] && grep -q "^judge_error:" "$T/e3.txt" && [ "$(gj "$T/g-nc" .checks.judge_error)" = true ] && ok "grader exits 3 when judge unusable" || nope "grader exits 3 when judge unusable"
 [ "$(jq -r .told "$T/g-S3/meta/judge-told.json")" = true ] && ok "judge output saved" || nope "judge output saved"
 # stream fixture
 R=$(ws S1 g-str $gp); patch_in "$R" S1; mkdir -p "$T/g-str/meta"
