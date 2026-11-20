@@ -2,11 +2,12 @@
 
 ## Identity
 
-This repo is a **Claude Code plugin marketplace** shipping cross-project skills for high-stakes AI decision-making. The marketplace (`.claude-plugin/marketplace.json`) publishes two plugins:
+This repo is a **Claude Code plugin marketplace** shipping cross-project skills for high-stakes AI decision-making. The marketplace (`.claude-plugin/marketplace.json`) publishes four plugins:
 
 - **`confidence-protocols`** — `confidence-protocol`, `principles-shipping-gate`
 - **`git-discipline-in-managed-worktrees`** — generic worktree contract for orchestrator-managed agents (paired with a project-specific overlay)
 - **`skill-observability`** — `PreToolUse` hook that logs every `Skill` tool invocation to `.claude/skill-invocations.jsonl`; lives in `plugins/skill-observability/`
+- **`autonomous-delivery`** — autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger; lives in `plugins/autonomous-delivery/`
 
 **Scope: cross-project skills only.** Anything project-specific — overlays, repo conventions, environment-bound rules — does not belong here. Skills in this marketplace must be portable across any consuming codebase.
 
@@ -35,7 +36,7 @@ If a change to a skill cannot be justified under the rules that skill teaches, t
 ├── README.md                      # Public-facing skill explanations
 ├── CLAUDE.md                      # This file — north star
 ├── .claude-plugin/
-│   └── marketplace.json           # marketplace: lists all three plugins
+│   └── marketplace.json           # marketplace: lists all four plugins
 ├── plugins/                       # one self-contained directory per plugin (own plugin.json)
 │   ├── confidence-protocols/
 │   │   ├── .claude-plugin/plugin.json
@@ -47,9 +48,12 @@ If a change to a skill cannot be justified under the rules that skill teaches, t
 │   │   └── skills/git-discipline-in-managed-worktrees/
 │   │       ├── SKILL.md
 │   │       └── OVERLAY-TEMPLATE.md
-│   └── skill-observability/
+│   ├── skill-observability/
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── hooks/log-skill-call.sh
+│   └── autonomous-delivery/
 │       ├── .claude-plugin/plugin.json
-│       └── hooks/log-skill-call.sh
+│       └── tests/test-structure.sh
 ├── tests/
 │   └── test-log-skill-call.sh
 └── evals/                         # falsification harnesses — pre-registrations, runners, results, FINDINGS
