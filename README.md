@@ -60,6 +60,16 @@ The validated contract for worker agents in orchestrated pipelines: stay on your
 
 Ships a `PreToolUse` hook (`plugins/skill-observability/hooks/log-skill-call.sh`) that appends one JSON line to `.claude/skill-invocations.jsonl` per `Skill` tool call — the telemetry base for verifying that skills actually fire in your sessions. `jq` required; user-typed `/slash` invocations are not logged (different hook surface); subagent skill calls are logged with agent metadata. Honest status: in the one production deployment inspected, the hook had never shipped to the installed plugin and **no invocation telemetry exists anywhere yet** — install this plugin explicitly and verify a line appears in the log before trusting skill-fire claims.
 
+### `autonomous-delivery` plugin
+
+Autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger (`plugins/autonomous-delivery/`).
+
+#### `run-plan`
+
+> Use when the operator has approved a spec and wants it delivered to deployed-and-verified without further input (`/run-plan <spec>`, resume with `/run-plan continue`).
+
+Plans, reviews (consistency, security and risk-chosen angles), implements unit by unit with confidence-protocol R1/R2 review, then deploys to a test environment and runs acceptance and monitoring: "done" means it works after deploy, never just "merged". Decisions no source pins, and operator-only actions (data deletion, production, money), go to one ledger (`.run-plan/ledger.md`, "Waiting on you") while the rest of the work continues; the session never asks questions. Project specifics live in an overlay: [`OVERLAY-TEMPLATE.md`](plugins/autonomous-delivery/skills/run-plan/OVERLAY-TEMPLATE.md). Not yet eval-validated (eval: `evals/run-plan-delivery/`, pilot pending).
+
 ---
 
 ## Cost
@@ -94,6 +104,7 @@ In Claude Code:
 /plugin install confidence-protocols@theclientzero
 /plugin install git-discipline-in-managed-worktrees@theclientzero
 /plugin install skill-observability@theclientzero
+/plugin install autonomous-delivery@theclientzero
 ```
 
 Skills activate via the `Skill` tool — only when their trigger matches. To verify they actually fire, install `skill-observability` and check `.claude/skill-invocations.jsonl` after a session.

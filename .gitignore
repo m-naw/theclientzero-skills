@@ -1,2 +1,3 @@
 .claude/
 *.lock
+!evals/**/.claude/

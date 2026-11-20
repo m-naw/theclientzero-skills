@@ -1,0 +1,18 @@
+{
+  "name": "autonomous-delivery",
+  "version": "0.1.0",
+  "description": "Autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger.",
+  "author": {
+    "name": "m-naw",
+    "email": "m-naw@users.noreply.github.com"
+  },
+  "repository": "https://github.com/m-naw/theclientzero-skills",
+  "license": "MIT",
+  "keywords": [
+    "autonomous-delivery",
+    "deployment",
+    "verification",
+    "decision-ledger",
+    "governance"
+  ]
+}
