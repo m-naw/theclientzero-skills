@@ -32,7 +32,8 @@ Do the full review below at the same hash. You have not seen R1, and you do not 
 2. **Tests:** does each new behaviour have a test that fails without the change? Compare every
    changed test file with its base: a weakened, skipped or deleted assertion is High.
 3. **Contracts:** does any existing response shape, schema, CLI output or file format change in a way
-   current users would notice? Unless the plan says the break is intended, it is High.
+   current users would notice? Unless the spec states in words that existing clients will break, it
+   is High.
 4. **Operator-only actions:** does the diff delete data, spend money, touch production, or take an
    action on the overlay's `protected` list? Any yes is High.
 5. **Security:** one pass over the diff for vulnerabilities, then a second pass that removes false

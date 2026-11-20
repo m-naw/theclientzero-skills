@@ -31,8 +31,9 @@ naming the missing spec and stop.
 ## Overlay
 
 The project declares its specifics in `.claude/run-plan.md`, made from `OVERLAY-TEMPLATE.md` next to
-this file: `verify`, `deploy_test`, `acceptance`, `monitor`, `done_at`, `merge`, `prod`, `risk`,
-`protected`. Missing keys take the template defaults (`merge: human`, `prod: human`). A missing
+this file: `verify`, `deploy_test`, `acceptance`, `monitor`, `window`, `rollback`, `done_at`, `merge`,
+`prod`, `risk`, `protected`. Missing keys take the template defaults (`merge: human`, `prod: human`,
+`rollback: none`). A missing
 `verify` is derived from the repo (test script, CI config) and recorded under "Decided" with its source.
 A missing overlay is a "Waiting on you" item with a proposed overlay; the run continues on defaults.
 
@@ -50,7 +51,9 @@ A missing overlay is a "Waiting on you" item with a proposed overlay; the run co
 3. **Units.** One implementer subagent per unit, briefed with `references/implementer.md`: test-first,
    stop rather than guess, run `verify`. Before merge, review per CP with `references/reviewer.md`:
    R1 triage on every diff (sonnet); R2 at the same hash (opus) for never-trivial surfaces (CP's list
-   plus the overlay's `risk` paths). Required checks green. Then merge per overlay `merge`:
+   plus the overlay's `risk` paths) and for CP's spot-check. Required checks green. No subagents
+   available: CP solo mode applies, nothing passes PROPOSED, and with `merge: self` you stop merging
+   and ledger each PR. Then merge per overlay `merge`:
    - `self`: the session merges after required checks pass. Allowed only when the overlay states that
      branch protection with required checks exists. Otherwise treat as `human`.
    - `human` (default): the PR becomes a "Waiting on you" item; start the next independent unit.
@@ -68,9 +71,13 @@ A missing overlay is a "Waiting on you" item with a proposed overlay; the run co
    then the evidence.
 
 Never do anything on the overlay's `protected` list, and never take an operator-only action:
-irreversible, client-facing, money, security exception, client production. Each is a "Waiting on you"
-item; everything else continues. Never change an existing contract (API shape, schema, CLI output) a
-user depends on, even when the spec's wording invites it, unless the spec says the break is intended.
+irreversible, client-facing, money, security exception, client production. A destructive migration or
+data deletion is operator-only in every environment, except throwaway local test data the run itself
+created. Each is a "Waiting on you" item; everything else continues.
+
+Never break an existing contract (API shape, schema, CLI output) that users depend on. Break it only
+when the spec states in words that existing clients will break. Otherwise ship additively (a new
+field or version) and make removal of the old shape a "Waiting on you" item.
 
 ## Definition of done
 
@@ -81,14 +88,18 @@ green and local tests passing are steps on the way, not done. Run `references/ac
    `merge: self`, on the PR head for `merge: human`.
 2. A step that fails, times out, errors, or is skipped or not run counts as failed. The cause does
    not matter: a port taken, an expired credential and a flaky environment are failures too.
-3. On failure: fix with data (logs, monitor output, screenshots), at most 2 rounds. Then revert or
-   flag off if the overlay allows it, and add a "Waiting on you" item with the evidence.
+3. On failure: fix with data (logs, monitor output, screenshots), at most 2 rounds. Then run the
+   overlay's `rollback` command if it declares one, and add a "Waiting on you" item with the evidence.
+   With `rollback: none` (the default), never revert on your own: ledger the failure.
 4. Never edit, weaken or delete an acceptance scenario or test to make it pass.
-5. Report exactly one status word, backed by command output:
+5. Report exactly one status per unit, backed by command output:
    - **done**: every step passed against the deployed environment.
-   - **verified locally**: `deploy_test` or `acceptance` is not declared. Say so in the ledger and in
-     the final message.
+   - **verified, not monitored**: `deploy_test` and `acceptance` passed; `monitor` is not declared.
+   - **verified locally**: `deploy_test` or `acceptance` is not declared; `verify` passed.
    - **not done**: any step failed or did not run. Say which, and what clears it.
+
+   The plan's status is its worst unit status. Any status below **done** goes in the ledger and the
+   final message.
 
 ## Decisions
 
@@ -168,7 +179,7 @@ unit boundary.
 | "The acceptance check is flaky, I'll skip it" | Skipped counts as failed. Fix it with data or ledger it. |
 | "I'll adjust the scenario so it matches what I built" | Editing a scenario to pass is faking acceptance. |
 | "The spec says delete, so I delete" | Deleting data is operator-only. Ledger it and deliver the rest. |
-| "The spec says change the response, so the old shape can go" | A silent contract break is a failure. Keep the old contract unless the spec says the break is intended. |
+| "The spec says change the response, so the old shape can go" | A silent contract break is a failure. Ship additively; removal of the old shape goes to "Waiting on you" unless the spec says in words that existing clients will break. |
 | "I'll ask which option they prefer" | Derive it. If no source pins it, write a PROPOSED record to the ledger. No questions. |
 | "It's reversible, so I'll just pick" | Reversibility does not make a preference derivable. Ledger it, park that piece only. |
 | "This one decision blocks everything, I'll wait" | Park only the affected piece; run everything else. |

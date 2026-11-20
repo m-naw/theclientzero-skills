@@ -27,10 +27,12 @@ rail is a deviation: report it, and never work around the rail.
 - Test-first: write the failing test, see it fail, then implement.
 - Never bypass branch protection, never skip or disable a required check, never edit a test to make
   it pass, never push to the default branch. Do not edit the plan or the spec.
-- Never change an existing contract (API shape, schema, CLI output, file format) that users depend on,
-  unless the plan says the break is intended. Add fields; do not move or rename existing ones.
+- Never break an existing contract (API shape, schema, CLI output, file format) that users depend on,
+  unless the spec states in words that existing clients will break. Otherwise ship additively (a new
+  field or version; do not move or rename existing ones) and report the old shape's removal as open.
 - Never take an action on the overlay's `protected` list or an operator-only action: irreversible,
-  client-facing, money, security exception, production.
+  client-facing, money, security exception, production. A destructive migration or data deletion is
+  operator-only, except throwaway local test data you created.
 - One git action per Bash command. Push with an explicit branch: `git push -u origin <branch>`.
 - Run `verify` once after your change and once before you open the pull request, not after every step.
 - Do not merge. The orchestrator merges.

@@ -68,7 +68,7 @@ Autonomous delivery from an approved spec to deployed-and-verified, with an oper
 
 > Use when the operator has approved a spec and wants it delivered to deployed-and-verified without further input (`/run-plan <spec>`, resume with `/run-plan continue`).
 
-Plans, reviews (consistency, security and risk-chosen angles), implements unit by unit with confidence-protocol R1/R2 review, then deploys to a test environment and runs acceptance and monitoring: "done" means it works after deploy, never just "merged". Decisions no source pins, and operator-only actions (data deletion, production, money), go to one ledger (`.run-plan/ledger.md`, "Waiting on you") while the rest of the work continues; the session never asks questions. Project specifics live in an overlay: [`OVERLAY-TEMPLATE.md`](plugins/autonomous-delivery/skills/run-plan/OVERLAY-TEMPLATE.md). Not yet eval-validated: the gate `evals/run-plan-delivery/` is in progress.
+Plans, reviews (consistency, security and risk-chosen angles), implements unit by unit with confidence-protocol R1/R2 review, then deploys to a test environment and runs acceptance and monitoring: "done" means it works after deploy, never just "merged". Decisions no source pins, and operator-only actions (data deletion, production, money), go to one ledger (`.run-plan/ledger.md`, "Waiting on you") while the rest of the work continues; the session never asks questions. Project specifics live in an overlay: [`OVERLAY-TEMPLATE.md`](plugins/autonomous-delivery/skills/run-plan/OVERLAY-TEMPLATE.md). Not yet eval-validated (eval: `evals/run-plan-delivery/`, pilot pending).
 
 ---
 

@@ -20,7 +20,8 @@ outcome is a failure:
 
 - Non-zero exit, a timeout, or a crash.
 - The step was skipped, not run, or reported "0 tests" or "no scenarios".
-- The command is missing from the overlay (then the status ceiling is "verified locally").
+- `deploy_test` or `acceptance` is missing from the overlay (then the status ceiling is "verified
+  locally"). A missing `monitor` caps the status at "verified, not monitored".
 - `monitor` shows errors that were not there before the deploy.
 - A cause outside the code: a port in use, an expired credential, a full disk, an environment down.
   The cause changes the fix, not the result: it is still a failure.
@@ -30,7 +31,8 @@ outcome is a failure:
 1. Collect data: deploy logs, server logs, `monitor` output, screenshots for UI. Find the cause before
    you change anything.
 2. Fix and rerun all three steps. At most 2 fix rounds.
-3. Still failing: revert or switch the feature flag off if the overlay allows it, and add a
+3. Still failing: run the overlay's `rollback` command if it declares one (with `rollback: none`, the
+   default, never revert on your own), and add a
    "Waiting on you" item with the failing command, its output, the cause you found and the exact step
    that clears it. A cause outside the code (the environment, credentials) goes straight to that item;
    do not work around it, for example by deploying somewhere the overlay does not name.
@@ -40,5 +42,6 @@ Never edit, weaken, skip or delete an acceptance scenario or a test to get a pas
 ## Status
 
 - **done**: all three steps passed, with output recorded.
+- **verified, not monitored**: `deploy_test` and `acceptance` passed; `monitor` is not declared.
 - **verified locally**: `deploy_test` or `acceptance` is not declared; `verify` passed.
 - **not done**: any step failed or did not run. Name the step and the "Waiting on you" item.

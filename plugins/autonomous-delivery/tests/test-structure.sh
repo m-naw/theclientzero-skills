@@ -23,8 +23,13 @@ done
 check resume-line grep -qF '/run-plan continue' "$SK"
 check cp-reference grep -q confidence-protocol "$SK"
 check no-askuserquestion sh -c "[ \"\$(grep -c AskUserQuestion $SK)\" -le 1 ]"
+# the one mention must sit in a "never" sentence (sentences split on ".")
+check askuserquestion-never sh -c "tr '\n.' ' \n' < $SK | grep AskUserQuestion | grep -qi never"
+check status-not-monitored sh -c "grep -q 'verified, not monitored' $SK && grep -q 'verified, not monitored' $S/references/acceptance.md"
+check status-worst-unit grep -q 'worst unit status' "$SK"
+check contract-in-words sh -c "grep -q 'states in words that existing clients will break' $SK && grep -q 'states in words that existing clients will break' $S/references/implementer.md"
 check skill-length sh -c "[ \"\$(wc -l < $SK)\" -le 200 ]"
-for k in verify deploy_test acceptance monitor merge prod risk protected; do
+for k in verify deploy_test acceptance monitor window rollback merge prod risk protected; do
   check "overlay-$k" grep -q "^$k:" "$S/OVERLAY-TEMPLATE.md"
 done
 for r in implementer reviewer acceptance ledger-template; do
