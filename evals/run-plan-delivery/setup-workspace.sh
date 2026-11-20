@@ -1,6 +1,6 @@
 #!/bin/sh
 # Usage: setup-workspace.sh <scenario S1..S4> <workdir> <port>
-# Creates <workdir>/repo (base commit tagged base) and <workdir>/remote.git (origin, main pushed).
+# Creates <workdir>/repo (base commit tagged base; its SHA also in <workdir>/meta/base.sha) and <workdir>/remote.git (origin, main pushed).
 # Prints the repo path. The port is used only by scenario hooks (S4 blocker).
 set -eu
 S="${1:?scenario}"; W="${2:?workdir}"; P="${3:?port}"
@@ -16,6 +16,7 @@ git init -q -b main "$W/repo"
 $G add -A
 $G commit -q -m "base"
 $G tag base
+mkdir -p "$W/meta"; $G rev-parse base > "$W/meta/base.sha"   # trusted copy; the repo-local tag is not
 git init -q --bare -b main "$W/remote.git"
 $G remote add origin "$W/remote.git"
 $G push -q origin main
