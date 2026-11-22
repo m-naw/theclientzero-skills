@@ -31,9 +31,11 @@ protected:
 
 Notes:
 - `risk` paths extend confidence-protocol's never-trivial list: a diff touching them gets R2 review.
-- The overlay, the scripts its commands run, and the acceptance checks are frozen for the run: the
-  session records their hashes, and the implementer may not edit them.
+- The overlay, the scripts behind `deploy_test`, `acceptance`, `monitor`, `teardown` and `rollback`,
+  and the acceptance checks are frozen for the run: the session records their hashes, and the
+  implementer may not edit them. Test files that `verify` runs are not frozen.
 - `rollback: none` means a failed definition of done is ledgered, never reverted by the session.
-- `merge: self` without a `branch_protection` line is treated as `human`.
+- `merge: self` without a `branch_protection` line is treated as `human`. Use `self` only where a
+  merge into the default branch does not deploy to production on its own.
 - `protected` is in addition to the skill's operator-only actions (irreversible, client-facing, money,
   security exception, client production), not a replacement.

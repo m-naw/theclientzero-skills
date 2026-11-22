@@ -4,7 +4,6 @@ acceptance: sh scripts/acceptance.sh
 monitor: sh scripts/monitor.sh
 window: 1m
 rollback: none
-done_at: unit
 merge: self
 branch_protection: main requires checks verify
 prod: human

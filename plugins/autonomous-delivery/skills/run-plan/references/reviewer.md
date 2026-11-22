@@ -2,8 +2,10 @@
 
 Send this brief to a fresh reviewer subagent that did not write the unit. Give it the pull request
 number, the head commit hash, the base commit, the plan path, the unit's name, the mode (`R1` or
-`R2`), the list of frozen files, and the lessons the unit added. The base
-must already contain the frozen acceptance checks. Never give it the implementer's summary. In `R2` mode, never give it the R1 verdict or prose.
+`R2`), the list of frozen files, and the lessons the unit added. The base is the commit the
+implementer started from, and it already contains the frozen acceptance checks: for the first unit
+under `merge: self` that is the checks commit, not the default branch. Never give it the
+implementer's summary. In `R2` mode, never give it the R1 verdict or prose.
 
 ---
 
@@ -19,8 +21,8 @@ given hash.
 2. Emit `trivial: true` or `trivial: false`, with a one-line citation from the diff. The diff is
    never trivial if it touches confidence-protocol's never-trivial surfaces (auth, crypto, secrets,
    tokens, sanitizing, dependency manifests, credentials, money, PII, license boundaries, governance
-   documents, production deployment, schema migrations, irreversible operations) or the overlay's
-   `risk` paths. Name the surface.
+   documents, production deployment, schema migrations, irreversible operations), permissions or
+   access rules (roles, profiles, sharing), or the overlay's `risk` paths. Name the surface.
 3. Then do the full review below.
 
 ## R2 — full review in fresh context (never-trivial surfaces)
@@ -37,9 +39,13 @@ Do the full review below at the same hash. You have not seen R1, and you do not 
    is High.
 4. **Operator-only actions:** does the diff delete data, spend money, touch production, or take an
    action on the overlay's `protected` list? Any yes is High.
-5. **Frozen files:** does the diff touch an acceptance check, the overlay or a script its commands
-   run? Any yes is High.
+5. **Frozen files:** does the diff add, change or delete a file on the frozen list you were given, or
+   any other file in the acceptance checks' directory? Any yes is High. Test files that `verify` runs
+   are not frozen: check 2 covers them.
 6. **Lessons:** for each lesson the unit added, ask "does this weaken a gate?". Each yes is High.
+7. **Security (R2 only):** if the diff touches auth, permissions, secrets, tokens, crypto,
+   credentials, sanitizing or PII: can a caller now skip a check, gain access they lacked, read a
+   secret, or pass input unsanitized? Any yes is High. What you could not rule out is Medium.
 
 ## Verdict
 

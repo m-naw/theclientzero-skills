@@ -39,8 +39,10 @@ While a run is active this Flow wins: never present another skill's option menu 
 1. **Start or resume.** Follow `## Resume` if `.run-plan/state.md` exists and its phase is not
    `finished`. Read the overlay and the spec. Preflight: required checks green on the default branch
    (`gh` when available), `verify` passes, overlay complete. Record in `state.md` the
-   `git hash-object` of the overlay and of every script its commands run. A red default branch outside
-   the spec's scope is a ledger item; with `merge: self`, start no unit that would merge into it.
+   `git hash-object` of the overlay and of the script files behind `deploy_test`, `acceptance`,
+   `monitor`, `teardown` and `rollback`. Not the test files `verify` runs: units add tests there. A
+   red default branch outside the spec's scope is a ledger item; with `merge: self`, start no unit
+   that would merge into it.
 2. **Plan and review.** Write the plan (`superpowers:writing-plans` when available): units, their
    dependencies, and for each acceptance scenario the unit that makes it pass. Review it without being
    asked, scaled to the plan. Always one independent *consistency* reviewer (spec, plan and acceptance
@@ -51,25 +53,30 @@ While a run is active this Flow wins: never present another skill's option menu 
    objection you considered and why you kept or rejected it; a spec that looks wrong gets a PROPOSED
    record, and the untouched parts are delivered. Then write every operator-only step the plan
    contains to "Waiting on you", print it once, and continue without waiting.
-3. **Acceptance checks.** Before any unit, a fresh subagent that implements no unit writes the checks,
-   briefed with `references/acceptance.md`: one check per acceptance scenario, named by its id. Run
-   them against the base, deployed with `deploy_test`: every new check must fail. Record that output
-   and each check file's `git hash-object` in `state.md`. The checks are now frozen. A check shown
-   wrong against a cited spec line is rewritten only by a fresh author subagent, must fail on the base
-   again, is re-frozen, and gets a "Decided" row.
-4. **Units.** One at a time, in dependency order. The target branch is the integration branch
-   `run-plan/<plan-slug>`, created from the default branch with the frozen checks as its first commit
-   (`merge: human`, the default), or the default branch (`merge: self`; the checks commit opens unit
-   1's branch). Per unit: one implementer subagent briefed with `references/implementer.md`, a branch
-   from the target's tip, one PR into the target. Then, on the unit's head:
-   1. Review per CP with `references/reviewer.md`: R1 triage on every diff (sonnet); R2 at the same
-      hash (opus) for never-trivial surfaces (CP's list plus the overlay's `risk` paths) and as CP's
+3. **Acceptance checks.** Before any unit, create the branch the checks land on: `run-plan/<plan-slug>`
+   from the default branch (`merge: human`, the default), or unit 1's branch (`merge: self`). There a
+   fresh subagent that implements no unit writes the checks, briefed with `references/acceptance.md`:
+   one per acceptance scenario, named by its id. It runs them against the base, deployed with
+   `deploy_test`: every new check must fail; one the base already satisfies stays only as a named
+   `guard`. Record that output, each check file's `git hash-object` and the unit that owns each id in
+   `state.md`. The checks are now frozen. If the base cannot be deployed, never work around it:
+   freeze the checks as `red: not shown`, ledger a cause outside the code, and go on to the units. A
+   check that contradicts a cited spec line or a rail of this skill is rewritten only by a fresh
+   author subagent, must fail on the base again, is re-frozen, and gets a "Decided" row.
+4. **Units.** One at a time, in dependency order. The target branch is `run-plan/<plan-slug>`
+   (`merge: human`) or the default branch (`merge: self`). Per unit: one implementer subagent briefed
+   with `references/implementer.md`, a branch from the target's tip (under `merge: self`, from the
+   checks commit until a unit has merged), one PR into the target. Then, on the unit's head:
+   1. Review per CP with `references/reviewer.md`, with base = the commit the implementer started from
+      (it holds the checks): R1 triage on every diff (sonnet); R2 at the same hash (opus) for
+      never-trivial surfaces (CP's list, permissions, the overlay's `risk` paths) and as CP's
       spot-check when the head hash ends in `0`.
-   2. Required checks green (`verify`, where they do not run on PRs into the integration branch).
+   2. Required checks green; where none report on this PR (integration branch, no CI), `verify`.
    3. `## Definition of done`.
    4. Merge into the target only when all three passed. If the target moved since the unit branched,
-      update the branch and repeat from 1. With `merge: self`, merge only when the overlay states that
-      branch protection with required checks exists; otherwise treat it as `human`.
+      update the branch and repeat from 1; a conflict, or a third move, makes the unit **not done**.
+      With `merge: self`, merge only when the overlay states that branch protection with required
+      checks exists; otherwise treat it as `human`.
 
    A fix is a new commit on the unit's branch and repeats from 1 at the new hash. A review rejection
    gets at most 2 fix rounds, like a failed step. A unit that ends **not done**, or whose implementer
@@ -79,10 +86,13 @@ While a run is active this Flow wins: never present another skill's option menu 
 5. **Production.** Per overlay `prod`. `human` (default): a "Waiting on you" item with a business-
    language summary, its risk, and the exact deploy command. `auto` only for the risk classes it names.
 6. **Capstone.** For a plan of more than one unit, review the whole change. For every plan, run the
-   run's one security review over the whole diff (`/security-review` when available); a High finding
-   becomes one more unit. If the test environment does not hold the target's final head, run
-   `## Definition of done` on it once more. With `merge: human`, open the one PR from the integration
-   branch into the default branch, with the "Decided" table in its body, as a "Waiting on you" item.
+   whole-diff security review (`/security-review` when available). A High finding in code this run
+   wrote becomes one more unit; one whose fix adds a mechanism the spec does not ask for (auth, a
+   permission model) is a "Waiting on you" item. With `merge: human`, merge the default branch into
+   the integration branch; a conflict is one more unit, never a hand merge. If the test environment
+   does not hold the tree of the target's final head, run `## Definition of done` on it once more.
+   With `merge: human`, open the one PR from the integration branch into the default branch, with the
+   "Decided" table in its body, as a "Waiting on you" item.
    Triage follow-ups: *do now* (cheap, in scope), *ledger* or *drop* (with the reason). State one
    alternative you considered, set `phase: finished`, and state where you stop.
 7. **Final message.** "Waiting on you", then PROVISIONAL decisions, then unit statuses with evidence.
@@ -103,8 +113,7 @@ Done means the change works in a running environment against the spec's acceptan
 CI green and local tests passing are steps on the way, not done. Run it on the unit's head, before the
 unit merges; `references/acceptance.md` says how to run and record each step.
 
-1. Recompute the frozen hashes (overlay, the scripts it runs, the checks). A changed hash is a failed
-   step unless `state.md` records it as a re-freeze.
+1. Recompute the hashes in `state.md`. A changed hash is a failed step unless recorded as a re-freeze.
 2. One deploy at a time: before `deploy_test`, run the overlay's `teardown`, or stop what this run's
    previous deploy started. Never stop a process the run did not start.
 3. `deploy_test` → `acceptance` → `monitor` for its window. Acceptance passed only when every scenario
@@ -133,11 +142,12 @@ Before deciding, derive: spec, ADRs, code, docs, conventions, or a focused inves
 - **Derivable:** a cited source pins the answer. Decide, and record under "Decided" with the source
   (`file:line`, a test, a command and its output). When the derivation is uncertain, one verification
   subagent with a different angle checks it first.
-- **Reversible preference:** no source pins it, and switching later is only a code change on this
-  run's branches (no data migration, no published contract, nothing that reached a client). Build the
-  recommended option in the form cheapest to change (one constant, flag or file). Record it under
-  "Decided" marked **PROVISIONAL**, CP state PROPOSED, with the alternative and the exact step that
-  reverses it. Do not park the piece: the code is built, the choice stays PROPOSED until confirmed.
+- **Reversible preference:** no source pins it, and switching later is one code change: no data
+  migration, no change to a published contract, nothing a client has seen, no never-trivial surface.
+  Build the recommended option in the form cheapest to change (one constant, flag or file). Record
+  it under "Decided" marked **PROVISIONAL**, CP state PROPOSED, with the alternative and the exact
+  step that reverses it. Do not park the piece. It may merge, but it never reaches production
+  unconfirmed: `prod: auto` does not cover it, and the production item lists every PROVISIONAL row.
 - **Operator-only** (see `## Flow`) or **not clearly reversible:** write a CP PROPOSED record as a
   "Waiting on you" item. Park only the affected piece; everything else continues.
 
@@ -165,9 +175,9 @@ high for security and high-risk work. Pass `model` on every dispatch. Reviewer i
 ## Resume
 
 `.run-plan/state.md` is the source of truth, and the only handoff document. It holds: phase
-(`finished` at the end), spec and plan paths, target branch, frozen hashes, per unit (branch, PR,
-reviewed hash, status, evidence paths), next step, and **Lessons** (what went wrong in earlier units
-and how to avoid it). Update it at every phase change.
+(`finished` at the end), this skill's path, spec and plan paths, target branch, frozen hashes, per
+unit (branch, PR, reviewed hash, status, evidence paths), next step, and **Lessons** (what went
+wrong in earlier units and how to avoid it). Update it at every phase change.
 
 - Stay thin: delegate reads, test runs and implementation to subagents; keep only their summaries.
 - Never stop for context. Auto-compaction may replace earlier turns: at the start of every unit,

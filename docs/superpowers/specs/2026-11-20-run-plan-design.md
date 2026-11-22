@@ -224,4 +224,6 @@ The binding text is `SKILL.md`; these rulings supersede the calls above where th
 4. No mandatory stop for context: `state.md` is the source of truth, re-read at every unit start.
 5. Reversible preferences are built provisionally and recorded under "Decided" as PROVISIONAL (CP
    state PROPOSED) with how to reverse. Only operator-only items wait. (Supersedes call 1.)
-6. Review scaled to plan size and risk; one security review per run, at capstone.
+6. Review scaled to plan size and risk; one security review per run, at capstone. R2 carries a security check on security surfaces.
+7. PROVISIONAL choices may merge (integration branch or, under `merge: self`, main) but never reach
+   production without operator confirmation (`prod: human`).
