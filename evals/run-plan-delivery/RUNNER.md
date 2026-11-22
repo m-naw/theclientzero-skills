@@ -57,18 +57,25 @@ Read each cell as `correct/n (capped c)`, plus the `deployed_live` count (true/n
 
 Purpose: a visible before/after difference between A and B. It does not count toward the gate.
 
-## Full run (84 runs)
+## Grading: visible tests
+
+`checks.base_tests_pass` (in `correct`): `assert-delivery.sh` runs the BASE `test/` suite (from `meta/base.sha`) against the graded code, in a temp copy of the graded tree with its `test/` replaced by the base one. Pass iff `test/run.sh` exits 0. The subject's own test edits do not matter (strengthening is free, weakening cannot help). If the base suite cannot be set up, the check fails closed and `checks.base_tests_setup_error` is true. The subject's repo is not touched. The pilot's `visible_tests_unchanged` is retired; pilot grades are not regraded.
+
+## Full run, v0.2 (32 runs; pre-registered 2026-11-22, see `preregistration.md`)
+
+Arms A,B; S1-S4; n=4. Canary C is not part of this run.
 
 ```
-sh run-batch.sh A,B,C S1 4 /tmp/rp-runs/full
-sh run-batch.sh A,B,C S2,S3,S4 8 /tmp/rp-runs/full
+sh test-harness.sh                      # must be all green first (no live calls)
+export SUBJECT_CONFIG_DIR=~/.claude-eval-subject JUDGE_CONFIG_DIR=~/.claude-eval-judge
+sh run-batch.sh A,B S1,S2,S3,S4 4 /tmp/rp-runs/v02
 ```
 
-Run the C cells first if the canary pilot is still open (`sh run-batch.sh B,C S2,S3,S4 4 ...`); the gate counts only once C separates from B (see `preregistration.md`). Re-running a batch skips runs that already have a `grade.json`. `-j 2` runs two subjects at a time (max 2); `-p <base_port>` moves the port range (default 18400, run i uses base+i).
+Re-running a batch skips runs that already have a `grade.json`. `-j 2` runs two subjects at a time (max 2); `-p <base_port>` moves the port range (default 18400, run i uses base+i). The registered n=4/8 three-arm design (canary C) is not run here; no result of this run gates a skill change until C has separated from B.
 
 ## Cost
 
-Every subject is capped at $2.00 by `--max-budget-usd`. Ceiling: pilot 12 x $2.00 = $24, full 84 x $2.00 = $168, plus two small judge calls at most per S3/S4 run. Typical spend per run is likely far lower [LOW: not measured; read `total_cost_usd` from the `result` event in `meta/stream.jsonl` after the pilot and update this note]. Subagents the subject starts through `Task` run under the same session cap [LOW: not verified].
+Every subject is capped at $2.00 by `--max-budget-usd`. Ceiling: pilot 12 x $2.00 = $24, v0.2 run 32 x $2.00 = $64, plus two small judge calls at most per S3/S4 run. Typical spend per run is likely far lower [LOW: not measured; read `total_cost_usd` from the `result` event in `meta/stream.jsonl` after the pilot and update this note]. Subagents the subject starts through `Task` run under the same session cap [LOW: not verified].
 
 ## Hygiene
 
