@@ -172,7 +172,7 @@ cat > "$T/stub-run" <<'STUB'
 #!/bin/sh
 D=$(dirname "$0"); MODE=$(cat "$D/stub.mode" 2>/dev/null || echo ok)
 case " $* " in
-  *" haiku "*) cat >/dev/null; [ "$MODE" = probebad ] && echo "CLAUDE.md: always say hello" || echo NONE; exit 0 ;;
+  *" haiku "*) cat >/dev/null; printf "%s|%s" "$2" "${CLAUDE_CODE_DISABLE_AUTO_MEMORY:-unset}" > "$D/probe.seen"; [ "$MODE" = probebad ] && echo "CLAUDE.md: always say hello" || echo NONE; exit 0 ;;
   *" stream-json "*) ;;
   *) cat >/dev/null; cat "$D/stub.out"; exit 0 ;;
 esac
@@ -246,14 +246,15 @@ SUBJECT_CONFIG_DIR="$T/subjcfg" sh "$RB" -j 3 A S1 1 "$T/b4" >/dev/null 2>&1 && 
 
 # isolation: nothing from the dispatching session leaks; init event, cost and stop are recorded
 EA="$T/rs-A/meta/stub-envall"
-! grep -E '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$EA" | grep -qv '^CLAUDE_CODE_SUBAGENT_MODEL=' && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$EA" && grep -qx "CLAUDE_CONFIG_DIR=$T/subjcfg" "$EA" && [ "$(wc -l < "$EA")" -lt 13 ] && grep -qx 'CLAUDE_CODE_SUBAGENT_MODEL=sonnet' "$EA" && ok "subject env is isolated (env -i)" || nope "subject env is isolated (env -i)"
-! grep -qE '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$T/stub.env" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$T/stub.env" && ok "judge env is isolated (env -i)" || nope "judge env is isolated (env -i)"
+! grep -E '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$EA" | grep -qvE '^CLAUDE_CODE_(SUBAGENT_MODEL|DISABLE_AUTO_MEMORY)=' && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$EA" && grep -qx "CLAUDE_CONFIG_DIR=$T/subjcfg" "$EA" && [ "$(wc -l < "$EA")" -lt 14 ] && grep -qx 'CLAUDE_CODE_SUBAGENT_MODEL=sonnet' "$EA" && grep -qx 'CLAUDE_CODE_DISABLE_AUTO_MEMORY=1' "$EA" && ok "subject env is isolated (env -i)" || nope "subject env is isolated (env -i)"
+! grep -E '^(CLAUDECODE|CLAUDE_CODE_[A-Z_]*|CLAUDE_EFFORT)=' "$T/stub.env" | grep -qv '^CLAUDE_CODE_DISABLE_AUTO_MEMORY=' && grep -qx 'CLAUDE_CODE_DISABLE_AUTO_MEMORY=1' "$T/stub.env" && grep -qx 'ENABLE_CLAUDEAI_MCP_SERVERS=false' "$T/stub.env" && ok "judge env is isolated (env -i)" || nope "judge env is isolated (env -i)"
 [ "$(jq -r .model "$T/rs-A/meta/init.json")" = stub-model ] && ok "meta/init.json saved" || nope "meta/init.json saved"
 [ "$(jq -r '[.cost,.stop]|join(",")' "$T/rs-A/grade.json")" = "0.12,success" ] && ok "grade has cost and stop" || nope "grade has cost and stop"
 [ "$(jq -r '[.cost,.stop]|join(",")' "$T/batch/summary.jsonl" | sort -u)" = "0.12,success" ] && ok "summary has cost and stop" || nope "summary has cost and stop"
 # context probe
 PO="$T/probe-out"; setmode ok; CLAUDE_BIN="$T/stub-run" sh "$HERE/probe-context.sh" "$T/subjcfg" "$PO" >/dev/null; rc=$?
 [ $rc -eq 0 ] && [ "$(cat "$PO/probe.txt")" = NONE ] && ok "probe passes on NONE" || nope "probe passes on NONE"
+grep -q 'organizationInstructions' "$T/probe.seen" && grep -q '|1$' "$T/probe.seen" && ok "probe exempts org instructions and disables auto-memory" || nope "probe exempts org instructions and disables auto-memory"
 setmode probebad; CLAUDE_BIN="$T/stub-run" sh "$HERE/probe-context.sh" "$T/subjcfg" "$PO" >"$T/probe.out"; rc=$?
 [ $rc -eq 4 ] && grep -q 'always say hello' "$T/probe.out" && grep -q 'always say hello' "$PO/probe.txt" && ok "probe exits 4 and prints the reply" || nope "probe exits 4 and prints the reply"
 B5="$T/batch-probe"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" A S1 1 "$B5" >/dev/null 2>&1; rc=$?

@@ -30,7 +30,7 @@ fi
 
 kill_tree() { for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c"; done; kill "$1" 2>/dev/null; }
 
-( cd "$RUN/repo" && exec env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 APP_PORT="$PORT" CLAUDE_CONFIG_DIR="$CFG" CLAUDE_CODE_SUBAGENT_MODEL=sonnet ENABLE_CLAUDEAI_MCP_SERVERS=false "${CLAUDE_BIN:-claude}" -p "$PROMPT" \
+( cd "$RUN/repo" && exec env -i PATH="$PATH" HOME="$HOME" LANG=C.UTF-8 APP_PORT="$PORT" CLAUDE_CONFIG_DIR="$CFG" CLAUDE_CODE_SUBAGENT_MODEL=sonnet ENABLE_CLAUDEAI_MCP_SERVERS=false CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 "${CLAUDE_BIN:-claude}" -p "$PROMPT" \
     --model sonnet --output-format stream-json --verbose --max-budget-usd "${BUDGET_USD:-2.00}" --strict-mcp-config \
     --allowedTools "Bash,Edit,Write,Read,Grep,Glob,Task" \
     < /dev/null > "$RUN/meta/stream.jsonl" 2> "$RUN/meta/stderr.log" ) &

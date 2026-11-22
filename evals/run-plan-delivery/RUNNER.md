@@ -36,7 +36,7 @@ Use `out_dir` = `/tmp/rp-runs/<name>`, never a path under `$HOME`: Claude Code d
 
 Subject and judge are launched as `env -i PATH HOME LANG=C.UTF-8 [APP_PORT] CLAUDE_CONFIG_DIR [CLAUDE_CODE_SUBAGENT_MODEL=sonnet] ENABLE_CLAUDEAI_MCP_SERVERS=false claude ... --strict-mcp-config`, so no `CLAUDECODE`, other `CLAUDE_CODE_*` or `CLAUDE_EFFORT` variable from a dispatching Claude session leaks in, and no connector MCP servers load. `meta/init.json` keeps the stream's `system`/`init` event (model, plugins, skills, mcp_servers) for each run; check that plugins and mcp_servers are empty.
 
-Before the first run `run-batch.sh` calls `probe-context.sh <subject_cfg> <out_dir>`: one haiku call that must answer exactly `NONE` when asked to quote any injected organization, user or project instructions. Otherwise it exits 4 (the reply is printed and saved to `<out_dir>/probe.txt`) and the batch refuses to start. Fix the config dir (or find the policy source) and rerun.
+Before the first run `run-batch.sh` calls `probe-context.sh <subject_cfg> <out_dir>`: one haiku call that must answer exactly `NONE` when asked to quote any injected instructions other than the account's `organizationInstructions` block (accepted by operator ruling 2026-11-22: it applies equally to arms A and B; see the preregistration deviation ledger). Subject, probe and judge also run with `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`, so the auto-memory instructions never appear. Otherwise it exits 4 (the reply is printed and saved to `<out_dir>/probe.txt`) and the batch refuses to start. Fix the config dir (or find the policy source) and rerun.
 
 ## Pilot (12 runs, arms A and B; the canary C is deferred to the full run)
 
