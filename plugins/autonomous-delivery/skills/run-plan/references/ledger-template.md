@@ -1,7 +1,8 @@
 # Ledger — <spec name>
 
 Copy to `.run-plan/ledger.md`. Keep exactly these three sections. Print "Waiting on you" at the top
-of every checkpoint message and of the final message; write "none" when it is empty.
+of every message to the operator; write "none" when it is empty. The final message lists the
+PROVISIONAL rows of "Decided" right after it.
 
 ## Waiting on you
 
@@ -11,9 +12,9 @@ of every checkpoint message and of the final message; write "none" when it is em
 
 ## Decided
 
-| # | Decision | Citing source | CP state | How verified |
-|---|---|---|---|---|
-| D1 | <decision> | <`file:line`, test, or command and output> | <PROPOSED, REVIEWED or LANDED> | <subagent angle, test run, or command> |
+| # | Decision | Citing source | CP state | How verified | PROVISIONAL: how to reverse |
+|---|---|---|---|---|---|
+| D1 | <decision> | <`file:line`, test, or command and output> | <REVIEWED or LANDED; PROPOSED only if PROVISIONAL> | <subagent angle, test run, or command> | <alternative and exact step, or "-"> |
 
 ## Follow-ups
 

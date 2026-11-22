@@ -211,3 +211,17 @@ Others: placement and governance changes (§6.1), overlay format (§6.2), CP rev
 (§6.3), `state.md` with Lessons replacing handoff files (§6.5), model table (§6.6), disagreement rule
 (§6.7), node fixture with a local bare remote, identical prompt, all-sonnet, single primary metric,
 canary pilot (§7), not using `claude plugin eval` (§7), production gate default `human` (§6.2).
+
+### v0.2 rulings (2026-11-22, operator-delegated, after the independent review)
+The binding text is `SKILL.md`; these rulings supersede the calls above where they differ.
+1. Acceptance checks are written from the spec by a subagent that implements nothing, before any
+   unit; each must fail first, then is frozen by hash with the overlay and its scripts.
+2. `merge: human` merges units into an integration branch `run-plan/<plan-slug>`; the operator gets
+   one final pull request. `merge: self` still merges into the default branch. (Supersedes call 2's
+   "never stack PRs".)
+3. The definition of done runs on the unit's head before it merges; one deploy at a time; a unit
+   that is not done blocks only its dependents.
+4. No mandatory stop for context: `state.md` is the source of truth, re-read at every unit start.
+5. Reversible preferences are built provisionally and recorded under "Decided" as PROVISIONAL (CP
+   state PROPOSED) with how to reverse. Only operator-only items wait. (Supersedes call 1.)
+6. Review scaled to plan size and risk; one security review per run, at capstone.

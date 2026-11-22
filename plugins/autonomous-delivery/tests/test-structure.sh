@@ -7,7 +7,7 @@ check() { # name, command...
   n=$1; shift
   if "$@" >/dev/null 2>&1; then echo "PASS $n"; else echo "FAIL $n"; fail=1; fi
 }
-check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.1.0"' plugins/autonomous-delivery/.claude-plugin/plugin.json
+check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.2.0"' plugins/autonomous-delivery/.claude-plugin/plugin.json
 check marketplace jq -e '[.plugins[].name]|index("autonomous-delivery")' .claude-plugin/marketplace.json
 check README grep -q autonomous-delivery README.md
 check CLAUDE.md grep -q autonomous-delivery CLAUDE.md
@@ -25,7 +25,14 @@ check cp-reference grep -q confidence-protocol "$SK"
 check no-askuserquestion sh -c "[ \"\$(grep -c AskUserQuestion $SK)\" -le 1 ]"
 # the one mention must sit in a "never" sentence (sentences split on ".")
 check askuserquestion-never sh -c "tr '\n.' ' \n' < $SK | grep AskUserQuestion | grep -qi never"
-check status-not-monitored sh -c "grep -q 'verified, not monitored' $SK && grep -q 'verified, not monitored' $S/references/acceptance.md"
+# statuses live once, in SKILL.md (acceptance.md no longer duplicates them, v0.2)
+check status-not-monitored grep -q 'verified, not monitored' "$SK"
+check acceptance-red-first sh -c "grep -q 'must fail' $SK && grep -q 'must fail' $S/references/acceptance.md"
+check acceptance-frozen sh -c "grep -q 'frozen' $SK && grep -q 'frozen' $S/references/implementer.md && grep -q 'Frozen files' $S/references/reviewer.md"
+check integration-branch grep -q 'run-plan/<plan-slug>' "$SK"
+check verify-before-merge sh -c "tr '\\n' ' ' < $SK | grep -q 'before the unit merges'"
+check provisional sh -c "grep -q PROVISIONAL $SK && grep -q PROVISIONAL $S/references/ledger-template.md"
+check no-context-stop grep -q 'Never stop for context' "$SK"
 check status-worst-unit grep -q 'worst unit status' "$SK"
 check contract-in-words sh -c "grep -q 'states in words that existing clients will break' $SK && grep -q 'states in words that existing clients will break' $S/references/implementer.md"
 check skill-length sh -c "[ \"\$(wc -l < $SK)\" -le 200 ]"

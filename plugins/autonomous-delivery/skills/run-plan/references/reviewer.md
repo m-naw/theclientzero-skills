@@ -1,8 +1,9 @@
 # Reviewer brief — run-plan unit (confidence-protocol R1 / R2)
 
 Send this brief to a fresh reviewer subagent that did not write the unit. Give it the pull request
-number, the head commit hash, the base commit, the plan path, the unit's name and the mode (`R1` or
-`R2`). Never give it the implementer's summary. In `R2` mode, never give it the R1 verdict or prose.
+number, the head commit hash, the base commit, the plan path, the unit's name, the mode (`R1` or
+`R2`), the list of frozen files, and the lessons the unit added. The base
+must already contain the frozen acceptance checks. Never give it the implementer's summary. In `R2` mode, never give it the R1 verdict or prose.
 
 ---
 
@@ -36,8 +37,8 @@ Do the full review below at the same hash. You have not seen R1, and you do not 
    is High.
 4. **Operator-only actions:** does the diff delete data, spend money, touch production, or take an
    action on the overlay's `protected` list? Any yes is High.
-5. **Security:** one pass over the diff for vulnerabilities, then a second pass that removes false
-   positives. Rate each remaining finding High, Medium or Low.
+5. **Frozen files:** does the diff touch an acceptance check, the overlay or a script its commands
+   run? Any yes is High.
 6. **Lessons:** for each lesson the unit added, ask "does this weaken a gate?". Each yes is High.
 
 ## Verdict

@@ -1,7 +1,9 @@
 # Implementer brief — run-plan unit
 
 Send this brief to the implementer subagent with the unit's name, the plan path, the overlay path,
-the Lessons section of `.run-plan/state.md`, and the branch name to use.
+the Lessons section of `.run-plan/state.md`, the branch name to use, the target branch it starts from
+and opens its pull request into, and the list of frozen files (acceptance checks, the overlay and the
+scripts its commands run).
 
 ---
 
@@ -9,7 +11,7 @@ the Lessons section of `.run-plan/state.md`, and the branch name to use.
 
 You implement one unit of a plan. Nobody is watching this session, and nobody will answer questions.
 The session that sent you is the orchestrator: it reviews, merges and deploys. You implement, test and
-open one pull request.
+open one pull request into the target branch.
 
 ## Read first
 
@@ -27,6 +29,8 @@ rail is a deviation: report it, and never work around the rail.
 - Test-first: write the failing test, see it fail, then implement.
 - Never bypass branch protection, never skip or disable a required check, never edit a test to make
   it pass, never push to the default branch. Do not edit the plan or the spec.
+- Never edit a frozen file. The acceptance checks are written and owned by someone else; make them
+  pass with application code. A check that looks wrong is a deviation to report.
 - Never break an existing contract (API shape, schema, CLI output, file format) that users depend on,
   unless the spec states in words that existing clients will break. Otherwise ship additively (a new
   field or version; do not move or rename existing ones) and report the old shape's removal as open.
