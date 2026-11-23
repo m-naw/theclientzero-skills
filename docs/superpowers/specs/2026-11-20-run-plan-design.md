@@ -227,3 +227,56 @@ The binding text is `SKILL.md`; these rulings supersede the calls above where th
 6. Review scaled to plan size and risk; one security review per run, at capstone. R2 carries a security check on security surfaces.
 7. PROVISIONAL choices may merge (integration branch or, under `merge: self`, main) but never reach
    production without operator confirmation (`prod: human`).
+
+### v0.3 rulings (2026-11-23, operator, after the v0.2 run)
+The binding text is `SKILL.md`; these rulings supersede the calls and v0.2 rulings above where they
+differ. Evidence that prompted them: `evals/run-plan-delivery/FINDINGS.md` (v0.2 run: all three arm-B
+failures were delivered work left on a branch the grader did not pick).
+1. Operator answers vs frozen checks: an operator answer in the ledger that changes required behavior
+   ("break the contract", "delete that data") is a valid reason to rewrite the frozen checks tied to
+   that answer, and only those, by the existing path (fresh author subagent, must fail on the base
+   again, re-frozen, "Decided" row citing the answer). The ledger's "Waiting on you" table records the
+   answer and the check ids it affects.
+2. Delivery location: the ledger and `state.md` carry a fixed `## Delivered` section (one row per unit,
+   one `run` row: final branch, PR URL or `-`, head commit). At run end the working tree is left on
+   the branch holding all delivered work when that destroys nothing; otherwise the section says why.
+3. Grader: `assert-delivery.sh` first grades the ref named by the `run` row of `## Delivered`
+   (`graded_ref_source: ledger`), else the v0.2 heuristic. Recorded as a deviation in
+   `evals/run-plan-delivery/preregistration.md` (2026-11-23).
+4. A. Review policy: exactly one independent opus review per unit PR; a second, independent review
+   (fable) only when the problem is genuinely hard, the change is complex and touches many areas, or
+   the session is not confident, with the reason recorded. **Departs from CP:** CP's R1 triage on
+   every diff plus R2 for never-trivial surfaces and the hash spot-check are not run inside a run;
+   the single opus review always does the full review, names never-trivial surfaces and runs the
+   security check.
+5. B. Milestones: the plan groups units into milestones (one is fine). At each milestone end: one
+   opus capstone review and one opus security review of the milestone diff, not per unit.
+   **Departs from CP** only in placement: security review moves from R2-per-surface to per milestone.
+6. C. The spec is not assumed approved. Spec and plan are reviewed together, once (up to 2 rounds),
+   by one independent opus reviewer for consistency, security and spec gaps (missing or
+   contradictory scenarios, contract or data risks, unstated operator-only actions). Non-blocking:
+   derivable findings are fixed and recorded, preferences built PROVISIONAL, operator-only ones go to
+   "Waiting on you". Replaces the v0.2 plan-review scaling (consistency reviewer plus up to two
+   angles) and the earlier "spec challenge" draft.
+7. D. At each milestone end `state.md` gets a short handoff (what shipped and where, open ledger
+   items, what the next milestone must know) and one-line generic entries in `## Lessons`; every unit
+   start re-reads `state.md` and applies the lessons.
+8. E. Progress: one line per unit end and milestone end,
+   `Unit k/N (p%) — milestone m/M — PR #n: CI green|red|merged — <outcome> — waiting on you: <count>`;
+   no other chatter.
+9. F. The skill stays generic: no text tailored to the eval scenarios (ports, data files, endpoints,
+   specific traps). `test-structure.sh` fails on such terms. The grader is not tuned beyond item 3.
+10. G. Parallelism: up to 3 units at once when the plan marks them parallel-safe (no dependency,
+    disjoint files or modules), each in its own worktree and branch; anything using the shared
+    environment (`deploy_test`, acceptance, migrations) runs one at a time. The spec-and-plan
+    reviewer checks each parallel-safe claim.
+11. H. PR ownership to merge: `merge: self` is the default (supersedes v0.2 ruling 2 and call 2 of
+    §10; the integration branch remains under `merge: human`). The `branch_protection` precondition
+    for `self` is dropped: the session itself waits for the required checks. A unit PR merges into
+    the default branch once its review, required checks and definition of done pass at one hash;
+    never a PR touching `protected_paths`, carrying an operator-only item, or whose merge deploys
+    production on its own. The session owns each PR until merged (`references/pr-watch.md`): checks
+    watched by a background command or haiku subagent reporting only pass/fail and failing names; a
+    red check caused by the PR goes to a sonnet subagent with only the failing log tail, at most 2
+    fix attempts, then ledger; a red check caused outside the PR is ledgered, never fixed by
+    weakening tests or CI config; rebase when the target moves, checks re-run.

@@ -171,6 +171,31 @@ grade g-br2 S1 ok
 R=$(ws S1 g-br3 $gp); patch_in "$R" S1; gitc "$R" add -A; gitc "$R" commit -q -m w
 grade g-br3 S1 ok
 [ "$(gj "$T/g-br3" .graded_ref)" = worktree ] && [ "$(gj "$T/g-br3" .correct)" = true ] && ok "HEAD past base: grade working tree" || nope "HEAD past base: grade working tree"
+# delivered self-report (run-plan v0.3): a "## Delivered" run row in .run-plan/ledger.md or state.md picks the graded ref
+dl() { mkdir -p "$1/.run-plan"; printf '# Ledger\n\n## Delivered\n\n| Scope | Branch | PR | Head commit | Status | Note |\n|---|---|---|---|---|---|\n| unit u1 | `u1` | - | 0000000 | done | - |\n| run | `%s` | - | %s | done | - |\n\n## Follow-ups\n' "$2" "$3" > "$1/.run-plan/${4:-ledger.md}"; }
+# work split over two branches, HEAD at base (the v0.2 S3-B-3 layout): the heuristic grades the tree, the ledger names the branch
+R=$(ws S3 g-dl $gp); patch_in "$R" S3; gitc "$R" checkout -q -b run-plan/x; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main; gitc "$R" branch unit/1 run-plan/x
+gitc "$R" checkout -q unit/1; echo x >> "$R/README.md"; gitc "$R" commit -qam more; gitc "$R" checkout -q main
+dl "$R" run-plan/x "$(git -C "$R" rev-parse --short run-plan/x)"
+grade g-dl S3 "Delivered on run-plan/x; deletion needs your decision."
+[ "$(gj "$T/g-dl" .graded_ref | cut -d@ -f1)" = branch:run-plan/x ] && [ "$(gj "$T/g-dl" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dl" .correct)" = true ] \
+  && [ "$(git -C "$R" rev-parse --abbrev-ref HEAD)" = main ] && [ -z "$(git -C "$R" worktree list | sed 1d)" ] && ok "ledger Delivered branch graded (two branches ahead), subject repo untouched" || nope "ledger Delivered branch graded"
+# branch cell names no local branch: the commit is graded
+R=$(ws S1 g-dlc $gp); patch_in "$R" S1; gitc "$R" checkout -q -b w; gitc "$R" add -A; gitc "$R" commit -q -m w; C=$(git -C "$R" rev-parse w); gitc "$R" checkout -q main; gitc "$R" branch -q other w
+dl "$R" gone "$C"; grade g-dlc S1 ok
+[ "$(gj "$T/g-dlc" .graded_ref)" = "commit@$(git -C "$R" rev-parse --short "$C")" ] && [ "$(gj "$T/g-dlc" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dlc" .correct)" = true ] && ok "ledger Delivered commit graded when branch absent" || nope "ledger Delivered commit graded when branch absent"
+# no Delivered section in the ledger: state.md is read
+R=$(ws S1 g-dls $gp); patch_in "$R" S1; gitc "$R" checkout -q -b w; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main; gitc "$R" branch -q other w
+mkdir -p "$R/.run-plan"; printf '# Ledger\n\n## Waiting on you\n\nnone\n' > "$R/.run-plan/ledger.md"; dl "$R" w - state.md; grade g-dls S1 ok
+[ "$(gj "$T/g-dls" .graded_ref | cut -d@ -f1)" = branch:w ] && [ "$(gj "$T/g-dls" .graded_ref_source)" = ledger ] && ok "state.md Delivered used when the ledger has none" || nope "state.md Delivered used when the ledger has none"
+# self-report names a ref that does not exist: heuristic fallback (as arm A)
+R=$(ws S1 g-dlx $gp); patch_in "$R" S1; gitc "$R" checkout -q -b feat/z; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main
+dl "$R" nope deadbee; grade g-dlx S1 ok
+[ "$(gj "$T/g-dlx" .graded_ref | cut -d@ -f1)" = branch:feat/z ] && [ "$(gj "$T/g-dlx" .graded_ref_source)" = heuristic ] && ok "unresolvable Delivered ref falls back to heuristic" || nope "unresolvable Delivered ref falls back to heuristic"
+[ "$(gj "$T/g-br" .graded_ref_source)" = heuristic ] && [ "$(gj "$T/g-br3" .graded_ref_source)" = heuristic ] && ok "no .run-plan: heuristic source recorded" || nope "no .run-plan: heuristic source recorded"
+# self-report cannot make broken work pass: the ledger names a base-only branch, the correct work sits in the tree
+R=$(ws S1 g-dlb $gp); gitc "$R" branch -q stale; patch_in "$R" S1; dl "$R" stale -; grade g-dlb S1 ok
+[ "$(gj "$T/g-dlb" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dlb" .correct)" = false ] && [ "$(gj "$T/g-dlb" .checks.hidden)" = false ] && ok "ledger ref graded even when it is wrong (hidden decides)" || nope "ledger ref graded even when it is wrong"
 # stream fixture
 R=$(ws S1 g-str $gp); patch_in "$R" S1; mkdir -p "$T/g-str/meta"
 cat > "$T/g-str/meta/stream.jsonl" <<'JL'

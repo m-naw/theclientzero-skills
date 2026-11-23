@@ -15,9 +15,8 @@ monitor: <command that exits non-zero on new errors since the deploy>
 window: <how long monitor watches, e.g. 10m>
 teardown: <optional command that stops the previous test deploy before the next one>
 rollback: none           # a command that reverts the test deploy or switches the flag off, or none. Default: none.
-merge: human             # human: units merge into run-plan/<plan-slug>, one final PR for you. self: default branch.
-# merge: self  requires the next line, stated by the operator:
-# branch_protection: <default branch> requires checks <names>
+merge: self              # self (default): each unit PR merges into the default branch after review, required checks
+                         # and the definition of done. human: units merge into run-plan/<plan-slug>, one final PR for you.
 prod: human              # human, or `auto: <risk classes>` for the classes that may deploy alone. Default: human.
 prod_command: <exact command that deploys to production>
 risk:
@@ -27,15 +26,19 @@ risk:
   client-facing: <UI, emails, anything a client sees>
 protected:
   - <actions the session must never take itself, e.g. "delete user data", "rotate credentials">
+protected_paths:
+  - <globs a unit PR may change but never auto-merge, e.g. "infra/**", "migrations/**">
 ```
 
 Notes:
-- `risk` paths extend confidence-protocol's never-trivial list: a diff touching them gets R2 review.
+- `risk` paths extend confidence-protocol's never-trivial list: the unit reviewer names them and runs
+  its security check, and a unit on a `risk` path is implemented on opus at high effort.
 - The overlay, the scripts behind `deploy_test`, `acceptance`, `monitor`, `teardown` and `rollback`,
   and the acceptance checks are frozen for the run: the session records their hashes, and the
   implementer may not edit them. Test files that `verify` runs are not frozen.
 - `rollback: none` means a failed definition of done is ledgered, never reverted by the session.
-- `merge: self` without a `branch_protection` line is treated as `human`. Use `self` only where a
-  merge into the default branch does not deploy to production on its own.
+- Set `merge: human` where a merge into the default branch deploys to production on its own: under
+  `self` the session never auto-merges such a PR, so every unit would wait on you. A PR touching
+  `protected_paths` or carrying an operator-only item is never auto-merged either.
 - `protected` is in addition to the skill's operator-only actions (irreversible, client-facing, money,
   security exception, client production), not a replacement.

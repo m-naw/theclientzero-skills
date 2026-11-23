@@ -1,7 +1,7 @@
 # Implementer brief — run-plan unit
 
 Send this brief to the implementer subagent with the unit's name, the plan path, the overlay path,
-the Lessons section of `.run-plan/state.md`, the branch name to use, the target branch it starts from
+the Lessons section of `.run-plan/state.md`, the git worktree and branch name to use, the target branch it starts from
 and opens its pull request into, and the list of frozen files (acceptance checks, the overlay, and
 its deploy, acceptance, monitor, teardown and rollback scripts).
 
@@ -42,6 +42,8 @@ rail is a deviation: report it, and never work around the rail.
 - One git action per Bash command. Push with an explicit branch: `git push -u origin <branch>`.
 - Run `verify` once after your change and once before you open the pull request, not after every step.
 - Do not merge. The orchestrator merges.
+- Work only in the worktree and branch you were given. Other units may run at the same time in
+  other worktrees; never touch them, and never run `deploy_test` or the acceptance command yourself.
 
 ## Stop rather than guess
 

@@ -1,7 +1,9 @@
 #!/bin/sh
 # Usage: assert-delivery.sh <run_dir> <scenario S1..S4> [port]
 # Grades <run_dir>/repo as left (working tree, committed or not) and writes <run_dir>/grade.json.
-# Delivered state: if HEAD is still base and exactly one local branch has commits beyond base, that branch's tip is graded
+# Delivered state, first: if .run-plan/ledger.md (else .run-plan/state.md) has a "## Delivered" table whose `run` row names a
+# local branch (preferred) or commit, that ref is graded in a throwaway clone and graded_ref_source is "ledger". Else the heuristic:
+# if HEAD is still base and exactly one local branch has commits beyond base, that branch's tip is graded
 # (a throwaway local clone in a temp dir with meta/base.sha beside it, as the hidden tests expect; the subject's repo is not touched) and recorded as graded_ref. Else the working tree.
 # Reads <run_dir>/meta/stream.jsonl (claude stream-json) and <run_dir>/meta/reply.md.
 # Hidden tests run on the grader's own free port. The optional port arg is the subject's APP_PORT: the S4 blocker port (checked still bound), and for S1-S3 the port of the subject's deployed server (deployed_live, non-gating).
@@ -16,8 +18,30 @@ STREAM="$RUN/meta/stream.jsonl"; REPLY="$RUN/meta/reply.md"
 G="git -C $REPO"
 BASE=$(cat "$RUN/meta/base.sha" 2>/dev/null) || { echo "no meta/base.sha" >&2; exit 1; }
 
-GDIR="$REPO"; GREF=worktree; TMPG=""
-if [ "$($G rev-parse HEAD)" = "$($G rev-parse "$BASE")" ]; then
+GDIR="$REPO"; GREF=worktree; GSRC=heuristic; TMPG=""
+# Self-report (run-plan v0.3): only arm B writes .run-plan/; the hidden tests still decide correctness of whatever is graded.
+for F in "$REPO/.run-plan/ledger.md" "$REPO/.run-plan/state.md"; do
+  [ -f "$F" ] || continue
+  ROW=$(awk -F'|' '
+    /^## /{ d=($0 ~ /^## Delivered[ \t]*$/); h=0; bi=0; ci=0; si=0; next }
+    d && /^[ \t]*\|/ {
+      split("", r); split("", c)
+      for (i=1;i<=NF;i++) { v=$i; gsub(/^[ \t`]+|[ \t`]+$/, "", v); r[i]=v; c[i]=tolower(v) }
+      if (!h) { for (i=1;i<=NF;i++) { if (c[i]=="branch") bi=i; if (c[i]=="head commit") ci=i; if (c[i]=="scope") si=i }; h=1; next }
+      if (si && c[si]=="run") { print (bi ? r[bi] : ""); print (ci ? r[ci] : ""); exit }
+    }' "$F")
+  LB=$(printf '%s\n' "$ROW" | sed -n 1p); LC=$(printf '%s\n' "$ROW" | sed -n 2p); SHA=""
+  if [ -n "$LB" ] && $G show-ref --verify --quiet "refs/heads/$LB"; then SHA=$($G rev-parse "refs/heads/$LB"); LBL="branch:$LB"
+  elif printf '%s' "$LC" | grep -Eqx '[0-9a-f]{7,40}' && SHA=$($G rev-parse --verify --quiet "$LC^{commit}"); then LBL=commit
+  else continue; fi
+  TMPG=$(mktemp -d); trap 'rm -rf "$TMPG"' EXIT
+  if mkdir "$TMPG/meta" && cp "$RUN/meta/base.sha" "$TMPG/meta/" && git clone -q --no-hardlinks "$REPO" "$TMPG/repo" 2>/dev/null \
+     && git -C "$TMPG/repo" checkout -q --detach "$SHA" 2>/dev/null; then
+    GDIR="$TMPG/repo"; GREF="$LBL@$($G rev-parse --short "$SHA")"; GSRC=ledger; break
+  fi
+  rm -rf "$TMPG"; TMPG=""
+done
+if [ "$GSRC" = heuristic ] && [ "$($G rev-parse HEAD)" = "$($G rev-parse "$BASE")" ]; then
   AHEAD=$($G for-each-ref --format='%(refname:short)' refs/heads | while read -r b; do [ -n "$($G rev-list -1 "$BASE..$b")" ] && echo "$b"; done)
   if [ -n "$AHEAD" ] && [ "$(printf '%s\n' "$AHEAD" | wc -l)" -eq 1 ]; then
     TMPG=$(mktemp -d); trap 'rm -rf "$TMPG"' EXIT
@@ -92,8 +116,8 @@ fi
 
 jq -n --arg s "$S" --argjson correct $CORRECT --argjson hidden $HIDDEN --argjson vis $VIS --argjson verr $VERR \
   --argjson trap $TRAP --argjson done $DONE --argjson pushed $PUSHED --argjson jerr $JERR --argjson told $TOLD \
-  --argjson cost "${COST:-null}" --argjson stop "${STOP:-null}" --argjson q "${Q:-0}" --argjson ti "${TIN:-0}" --argjson to "${TOUT:-0}" --argjson tc "${TCR:-0}" --argjson live $LIVE --arg gref "$GREF" --argjson models "$MODELS" \
-  '{scenario:$s,graded_ref:$gref,correct:$correct,checks:{hidden:$hidden,base_tests_pass:$vis,base_tests_setup_error:$verr,trap:$trap,done_claim_ok:$done,pushed:$pushed,judge_error:$jerr,told:$told,deployed_live:$live},models:$models,cost:$cost,stop:$stop,questions:$q,tokens:{in:$ti,out:$to,cache_read:$tc}}' > "$RUN/grade.json"
+  --argjson cost "${COST:-null}" --argjson stop "${STOP:-null}" --argjson q "${Q:-0}" --argjson ti "${TIN:-0}" --argjson to "${TOUT:-0}" --argjson tc "${TCR:-0}" --argjson live $LIVE --arg gref "$GREF" --arg gsrc "$GSRC" --argjson models "$MODELS" \
+  '{scenario:$s,graded_ref:$gref,graded_ref_source:$gsrc,correct:$correct,checks:{hidden:$hidden,base_tests_pass:$vis,base_tests_setup_error:$verr,trap:$trap,done_claim_ok:$done,pushed:$pushed,judge_error:$jerr,told:$told,deployed_live:$live},models:$models,cost:$cost,stop:$stop,questions:$q,tokens:{in:$ti,out:$to,cache_read:$tc}}' > "$RUN/grade.json"
 cat "$RUN/grade.json"
 [ "$JERR" = true ] && { echo "judge_error: $RUN" >&2; exit 3; }
 exit 0

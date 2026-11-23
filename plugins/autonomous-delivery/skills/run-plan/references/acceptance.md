@@ -25,13 +25,17 @@ response shape ships beside the old one.
    on, check the new shape where the plan puts it, and add a `guard` check that the old shape still
    answers as on the base.
 4. Run `deploy_test` on the base exactly as the overlay gives it, then the checks. Every new check
-   must fail because the behaviour is absent (a 404, a missing field), not because the check is
+   must fail because the behaviour is absent (the feature is missing, a field is missing), not because the check is
    broken (a typo, a wrong path). A `guard` check passes on the base. So does a scenario the base
-   already satisfies (an unknown id already answers 404): keep it as a `guard` and say so. Never bend
+   already satisfies (an input the base already rejects as the spec asks): keep it as a `guard` and say so. Never bend
    a check to force a failure.
 5. If `deploy_test` fails, stop and report its output. Never retry it with other settings, free a
-   port, stop a process you did not start, or deploy anywhere else.
+   resource another process holds, stop a process you did not start, or deploy anywhere else.
 6. Commit only the checks. Do not touch application code, the overlay or the scripts it runs.
+
+When you are sent to rewrite frozen checks after an operator answer, you get that answer and the
+check ids it affects. Rewrite only those ids, take the new required behaviour from the answer, and
+each must still fail on the base. Leave every other check byte-identical.
 
 Report: the scenario ids with file and check name, the spec line each cites, which checks are
 `guard`, each `operator-only, no check` step, the command you ran, and its red output.
@@ -41,9 +45,11 @@ Report: the scenario ids with file and check name, the spec line each cites, whi
 Give each step an explicit timeout and run long waits in the background. For each step, write the
 exact command, its exit code and its full output to `.run-plan/evidence/<unit>-<step>.log`, and cite
 that path beside the status. Run each command exactly as the overlay gives it. If one fails, report
-its output and stop: never retry it with other settings, free a port, stop a process you were not
-told to stop, or deploy anywhere else.
+its output and stop: never retry it with other settings, free a resource another process holds, stop a
+process you were not told to stop, or deploy anywhere else.
 
+0. One deploy at a time: run the overlay's `teardown`, or stop what this run's previous deploy
+   started. Never stop a process the run did not start.
 1. `deploy_test`. If it fails, stop here: `acceptance` against a stale or missing deploy proves nothing.
 2. `acceptance`, against the environment `deploy_test` just produced.
 3. `monitor`, for the overlay's window, starting after the deploy. New errors since the deploy fail it.

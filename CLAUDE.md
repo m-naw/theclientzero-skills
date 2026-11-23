@@ -56,7 +56,7 @@ If a change to a skill cannot be justified under the rules that skill teaches, t
 │       ├── skills/run-plan/
 │       │   ├── SKILL.md
 │       │   ├── OVERLAY-TEMPLATE.md
-│       │   └── references/        # implementer, reviewer, acceptance, ledger-template
+│       │   └── references/        # implementer, reviewer, acceptance, ledger-template, pr-watch
 │       └── tests/test-structure.sh
 ├── tests/
 │   └── test-log-skill-call.sh
