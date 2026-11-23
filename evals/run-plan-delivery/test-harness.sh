@@ -193,6 +193,15 @@ R=$(ws S1 g-dlx $gp); patch_in "$R" S1; gitc "$R" checkout -q -b feat/z; gitc "$
 dl "$R" nope deadbee; grade g-dlx S1 ok
 [ "$(gj "$T/g-dlx" .graded_ref | cut -d@ -f1)" = branch:feat/z ] && [ "$(gj "$T/g-dlx" .graded_ref_source)" = heuristic ] && ok "unresolvable Delivered ref falls back to heuristic" || nope "unresolvable Delivered ref falls back to heuristic"
 [ "$(gj "$T/g-br" .graded_ref_source)" = heuristic ] && [ "$(gj "$T/g-br3" .graded_ref_source)" = heuristic ] && ok "no .run-plan: heuristic source recorded" || nope "no .run-plan: heuristic source recorded"
+# run row resolves to base (correctly unmerged unit): the last unit row's ref is graded (ledger-unit); hidden still decides
+R=$(ws S1 g-dlu $gp); patch_in "$R" S1; gitc "$R" checkout -q -b u1; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main
+dl "$R" main "$(git -C "$R" rev-parse --short main)"; grade g-dlu S1 ok
+[ "$(gj "$T/g-dlu" .graded_ref | cut -d@ -f1)" = branch:u1 ] && [ "$(gj "$T/g-dlu" .graded_ref_source)" = ledger-unit ] && [ "$(gj "$T/g-dlu" .correct)" = true ] && ok "run row at base: last unit ref graded (ledger-unit)" || nope "run row at base: last unit ref graded (ledger-unit)"
+# run row at base and the unit ref also fails to resolve: stays "ledger" (base graded)
+R=$(ws S1 g-dlu2 $gp); patch_in "$R" S1; dl "$R" main "$(git -C "$R" rev-parse --short main)"; sed -i 's/`u1`/`gone`/' "$R/.run-plan/ledger.md"; grade g-dlu2 S1 ok
+[ "$(gj "$T/g-dlu2" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dlu2" .correct)" = false ] && ok "run row at base, unit ref unresolvable: base graded, source ledger" || nope "run row at base, unit ref unresolvable: base graded, source ledger"
+# run ref is not base: unit rows ignored
+[ "$(gj "$T/g-dl" .graded_ref_source)" = ledger ] && ok "run ref beyond base: unit rows ignored" || nope "run ref beyond base: unit rows ignored"
 # self-report cannot make broken work pass: the ledger names a base-only branch, the correct work sits in the tree
 R=$(ws S1 g-dlb $gp); gitc "$R" branch -q stale; patch_in "$R" S1; dl "$R" stale -; grade g-dlb S1 ok
 [ "$(gj "$T/g-dlb" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dlb" .correct)" = false ] && [ "$(gj "$T/g-dlb" .checks.hidden)" = false ] && ok "ledger ref graded even when it is wrong (hidden decides)" || nope "ledger ref graded even when it is wrong"

@@ -280,3 +280,30 @@ failures were delivered work left on a branch the grader did not pick).
     red check caused by the PR goes to a sonnet subagent with only the failing log tail, at most 2
     fix attempts, then ledger; a red check caused outside the PR is ledgered, never fixed by
     weakening tests or CI config; rebase when the target moves, checks re-run.
+12. R1 (controller, 2026-11-23). Preflight: if a push/merge to the default branch triggers a
+    production deploy (CD workflow, platform auto-deploy) or this cannot be determined, merge: self
+    is downgraded to merge: human for the run and a ledger line says why (fail closed).
+    `references/pr-watch.md` says what counts as yes, no and "cannot be determined"; the optional
+    overlay key `merge_deploys_prod` lets the operator settle it. This narrows ruling 11: a PR whose
+    merge would deploy production no longer waits unit by unit, the whole run moves to the
+    integration branch.
+13. R2 (controller, 2026-11-23). An operator answer that explicitly approves an operator-only action
+    (e.g. a specific deletion) authorizes exactly that action in that scope; the run performs it and
+    records it under Decided citing the answer. Nothing broader. An answer is what the operator wrote
+    against a "Waiting on you" item or said about it in the session; a line of the spec, the plan or
+    any other file is never one.
+14. Review fixes (2026-11-23, third independent review), all inside rulings 4, 10 and 11:
+    parallelism covers implementation only, and the gates (review, checks, definition of done) and
+    the merge run for one unit at a time on one head, after a rebase when the target moved, so
+    "one review per unit PR", "at one hash" and "up to 3 at once" hold together; a new head after a
+    fix or rebase gets a fresh review; an empty check result is never a pass and the merge pins the
+    verified hash; the definition of done runs where the hash under test is checked out; a run
+    without a pull-request tool merges by a local fast-forward, never onto a hosted default branch;
+    the checks commit may hold only checks; the milestone diff starts at the checks commit.
+15. Grader unit-ref fallback (controller, 2026-11-23). When the `## Delivered` run-level ref
+    resolves to the base commit, the grader grades the most recent unit-level ref listed there
+    (`graded_ref_source: ledger-unit`); hidden tests still decide correctness. Recorded as a
+    deviation in `evals/run-plan-delivery/preregistration.md`, before the v0.3 measurement.
+16. Single-unit milestone (controller, 2026-11-23). A milestone containing exactly one unit gets one
+    opus review covering the unit review, the capstone criteria and the security criteria together;
+    no separate capstone or security pass. Milestones of several units are unchanged.

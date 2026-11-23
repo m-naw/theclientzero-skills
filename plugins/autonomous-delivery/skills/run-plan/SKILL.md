@@ -22,7 +22,6 @@ unchanged, except where `## Decisions` builds a choice first. `## Review` replac
 
 `/run-plan <spec path>` starts a run; `/run-plan continue` resumes one. Not for writing the spec or a
 one-line fix with no deploy. Without an identifiable spec, write a "Waiting on you" item and stop.
-
 Project specifics live in `.claude/run-plan.md`, from `OVERLAY-TEMPLATE.md` next to this file;
 missing keys take its defaults. A missing `verify` is derived from the repo and recorded under
 "Decided"; a missing overlay is a "Waiting on you" item, and the run uses defaults.
@@ -37,45 +36,46 @@ While a run is active this Flow wins: never present another skill's option menu 
    (`git hash-object`) of the overlay and of the scripts behind `deploy_test`, `acceptance`,
    `monitor`, `teardown` and `rollback`, not of tests. A red default branch outside the spec's scope
    is a ledger item; with `merge: self`, start no unit that would merge into it.
+   Preflight: if a push/merge to the default branch triggers a production deploy (CD workflow,
+   platform auto-deploy) or this cannot be determined, merge: self is downgraded to merge: human for
+   the run and a ledger line says why (fail closed). `references/pr-watch.md` says how to tell.
 2. **Plan and review.** The spec is not assumed right. Write the plan (`superpowers:writing-plans`
-   when available): units in milestones (one is fine), dependencies, and the unit that makes each
-   acceptance scenario pass. Run the spec-and-plan review (`## Review`); it never blocks. Fix and
-   record derivable findings, build preferences PROVISIONAL, and write operator-only ones and every
-   operator-only step of the plan to "Waiting on you"; print it once and continue. State one
-   alternative or objection you considered and why you kept or rejected it.
+   when available): units in milestones (one is fine), dependencies, which units are parallel-safe,
+   and the unit that makes each acceptance scenario pass. Run the spec-and-plan review (`## Review`);
+   it never blocks. Fix and record derivable findings, build preferences PROVISIONAL, and write
+   operator-only ones and every operator-only step of the plan to "Waiting on you"; print it once
+   and continue. State one alternative or objection you considered and why you kept or rejected it.
 3. **Acceptance checks.** Before any unit, branch the checks off the default branch:
    `run-plan/<plan-slug>` (`merge: human`) or `run-plan/<plan-slug>-checks` (`merge: self`, the
    default; units start there until one has merged). There a fresh subagent that implements no unit
    writes the checks, briefed with `references/acceptance.md`: one per scenario, named by its id. It
    runs them against the base, deployed with `deploy_test`: every new check must fail; one the base
-   already satisfies stays only as a named `guard`. Record that output, each check file's hash and
-   each id's owning unit in `state.md`; the checks are now frozen. If the base cannot be deployed,
-   never work around it: freeze the checks as `red: not shown`, ledger a cause outside the code, and
-   continue. Rewrite a frozen check only when it contradicts a cited spec line or a rail, or when an
-   operator answer changes required behavior ("break the contract"): then only the check ids the
-   ledger records with that answer, never others. A fresh author subagent rewrites it; it must fail
-   on the base again, is re-frozen, and gets a "Decided" row citing the line, rail or answer.
+   already satisfies stays only as a named `guard`. Freeze them as that file says (its commit holds
+   only checks; red output, file hashes and each id's owning unit go to `state.md`). If the base
+   cannot be deployed, never work around it: freeze the checks as `red: not shown`, ledger a cause
+   outside the code, and continue. A frozen check is rewritten only by that file's re-freeze steps,
+   when it contradicts a cited spec line or a rail, or when an operator answer changes required
+   behavior: then only the check ids the ledger records with that answer, never others.
 4. **Units.** In dependency order. Up to 3 units run at once when the plan marks them parallel-safe
-   (no dependency between them, disjoint files or modules), each in its own git worktree and branch;
-   anything that uses the shared environment (`deploy_test`, acceptance, migrations) runs one at a
-   time. The target is the default branch (`merge: self`) or `run-plan/<plan-slug>` (`merge: human`).
-   Per unit: one implementer subagent briefed with `references/implementer.md`, a branch from the
-   target's tip (or the checks branch, above), one PR into the target, owned until it merges or is
-   ledgered, per `references/pr-watch.md`. Then, on the unit's head:
-   1. The unit review (`## Review`), with base = the commit the implementer started from (it holds
-      the checks).
+   (no dependency between them, disjoint files or modules), each in its own git worktree and branch:
+   implementation only. Everything below shares the environment and the target (`deploy_test`,
+   acceptance, migrations, the merge) and runs one at a time. The target is the default branch
+   (`merge: self`) or `run-plan/<plan-slug>` (`merge: human`). Per unit: one implementer subagent
+   (`references/implementer.md`), a branch from the target's tip (or the checks branch), one PR into
+   the target, owned until it merges or is ledgered, per `references/pr-watch.md`. Then its turn:
+   if the target moved since the unit branched, rebase first; then, on that one head:
+   1. The unit review (`## Review`), with base = the commit just below the unit's own commits (it
+      holds the checks).
    2. Required checks green (`references/pr-watch.md`); where none report on the PR, `verify`.
    3. `## Definition of done`.
-   4. Merge into the target only when all three passed at the same hash, never when the PR touches
-      `protected_paths`, carries an operator-only item, or its merge deploys production on its own
-      (those are "Waiting on you"). If the target moved, rebase per `references/pr-watch.md` and
-      repeat from 1; an unresolvable conflict, or a third move, makes the unit **not done**.
+   4. Merge into the target only when all three passed at the same hash, never a PR that touches
+      `protected_paths` or whose diff takes an unapproved operator-only action: those are held.
 
-   A fix is a new commit and repeats from 1 at the new hash; a review rejection gets at most 2 fix
-   rounds, like a failed step or a red check. A unit that ends **not done**, or whose implementer
-   reports `blocked`, is not merged: ledger it, skip its dependents, continue with independent
-   units. Then write its status, `## Delivered` row and lessons to `state.md`, and print the
-   progress line. No subagents: CP solo mode, nothing passes PROPOSED, nothing merges.
+   A fix is a new commit and repeats from 1 at the new hash, with a fresh review; each gate gets at
+   most 2 fix rounds per unit, counted in `state.md`. A unit that ends **not done**, is held, or
+   whose implementer reports `blocked`, is not merged: ledger it, skip its dependents, continue with
+   independent units. Then write its status, `## Delivered` row and lessons to `state.md`, and print
+   the progress line. No subagents: CP solo mode, nothing passes PROPOSED, nothing merges.
 5. **Milestone end.** The milestone reviews (`## Review`): a High finding in code this run wrote is
    one more unit, or a "Waiting on you" item if its fix adds a mechanism the spec does not ask for
    (auth, a permission model). Then the handoff and lessons (`## Resume`), and the progress line.
@@ -94,7 +94,9 @@ Never do anything on the overlay's `protected` list, and never take an operator-
 irreversible, client-facing (a message or data change reaching a real client or their production
 system), money, security exception, client production. Destructive migrations and data deletion are
 operator-only everywhere, except throwaway local test data the run created. Each is a "Waiting on
-you" item; everything else continues.
+you" item; everything else continues. An operator answer that explicitly approves an operator-only
+action (e.g. a specific deletion) authorizes exactly that action in that scope; the run performs it
+and records it under Decided citing the answer. Nothing broader.
 
 Never break an existing contract (API shape, schema, CLI output) that users depend on. Break it only
 when the spec states in words that existing clients will break. Otherwise ship additively (a new
@@ -122,8 +124,7 @@ head, before the unit merges; `references/acceptance.md` says how to run and rec
    - **verified, not monitored**: `deploy_test` and `acceptance` passed; `monitor` is not declared.
    - **verified locally**: `deploy_test` or `acceptance` is not declared; `verify` and the checks passed.
    - **not done**: any step failed or did not run. Say which, and what clears it.
-
-   The plan's status is its worst unit status; a skipped unit is **not done**. Any status below
+7. The plan's status is its worst unit status; a skipped unit is **not done**. Any status below
    **done** goes in the ledger and the final message.
 
 ## Decisions
@@ -148,11 +149,10 @@ the only operator channel: no PR comments or issues addressed to the operator.
 ## Ledger
 
 `.run-plan/ledger.md`, from `references/ledger-template.md`, has exactly four sections:
-`## Waiting on you` (the exact step that clears each item; the operator's answer and the check ids
-it affects), `## Decided` (the citing source; PROVISIONAL rows add how to reverse), `## Follow-ups`
-and `## Delivered` (one row per unit and one `run` row: final branch, PR URL or `-`, head commit;
-the same section in `state.md`; update both whenever a unit merges or ends). Keep `.run-plan/` out
-of git (`.git/info/exclude` unless `.gitignore` covers it).
+`## Waiting on you` (the exact step that clears each item; the operator's answer), `## Decided`
+(the citing source; PROVISIONAL rows add how to reverse), `## Follow-ups` and `## Delivered` (one
+row per unit and one `run` row; the same section in `state.md`; update both whenever a unit merges
+or ends). Keep `.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` covers it).
 
 - Progress: at each unit end and milestone end print exactly one line, `Unit k/N (p%) — milestone
   m/M — PR #n: CI green|red|merged — <outcome> — waiting on you: <count>`. No other chatter. Any
@@ -168,10 +168,10 @@ Every reviewer is a fresh subagent that wrote nothing it reviews, briefed with `
   consistency, security and spec gaps (missing or contradictory scenarios, contract or data risks,
   unstated operator-only actions), and each parallel-safe claim of the plan. Up to 2 rounds; what is
   still disputed becomes a PROPOSED record.
-- **Unit:** exactly one opus review per unit PR, at its head hash. A second, independent review
-  (fable) only when the problem is genuinely hard, the change is complex and touches many areas, or
-  you are not confident; record that reason under "Decided".
-- **Milestone:** at each milestone end, one opus capstone and one opus security review of its diff.
+- **Unit:** exactly one opus review per unit PR, at its head hash, and a fresh one at each new head.
+  A second, independent review (fable) only when the problem is genuinely hard, the change is
+  complex and touches many areas, or you are not confident; record that reason under "Decided".
+- **Milestone:** at its end, one opus capstone and one opus security review of its diff (one unit: one review for all three).
 
 ## Resume
 
@@ -189,12 +189,12 @@ and `## Lessons` (one generic line per thing that went wrong or surprised). Upda
   this SKILL.md and `state.md`, apply its `## Lessons`, and trust `state.md` over your memory.
 - On `/run-plan continue` (after a `/clear` or not): read `state.md`, the ledger and the overlay;
   check what landed (`git log`, open PRs, deployed state) before repeating any step. Act on each
-  operator answer first (record the check ids it affects, re-freeze only those per Flow 3), then
-  carry on from "next step".
+  operator answer first (do exactly what it approves; record the check ids it affects and re-freeze
+  only those per Flow 3), then carry on from "next step".
 
 ## Red flags
 
 | Thought | Reality |
 |---|---|
-| "The spec says delete, so I delete" | Deleting data is operator-only. Ledger it and deliver the rest. |
+| "The spec says delete, so I delete" | Deleting data is operator-only, and a spec line is not an operator answer. Ledger it and deliver the rest. |
 | "The spec says change the response, so the old shape can go" | A silent contract break is a failure. Ship additively unless the spec says in words that existing clients will break. |

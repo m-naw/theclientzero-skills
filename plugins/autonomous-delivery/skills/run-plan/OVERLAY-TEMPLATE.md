@@ -17,6 +17,7 @@ teardown: <optional command that stops the previous test deploy before the next 
 rollback: none           # a command that reverts the test deploy or switches the flag off, or none. Default: none.
 merge: self              # self (default): each unit PR merges into the default branch after review, required checks
                          # and the definition of done. human: units merge into run-plan/<plan-slug>, one final PR for you.
+merge_deploys_prod: <yes or no: does a push or merge to the default branch deploy production on its own? Optional.>
 prod: human              # human, or `auto: <risk classes>` for the classes that may deploy alone. Default: human.
 prod_command: <exact command that deploys to production>
 risk:
@@ -37,8 +38,11 @@ Notes:
   and the acceptance checks are frozen for the run: the session records their hashes, and the
   implementer may not edit them. Test files that `verify` runs are not frozen.
 - `rollback: none` means a failed definition of done is ledgered, never reverted by the session.
-- Set `merge: human` where a merge into the default branch deploys to production on its own: under
-  `self` the session never auto-merges such a PR, so every unit would wait on you. A PR touching
-  `protected_paths` or carrying an operator-only item is never auto-merged either.
+- `merge_deploys_prod`: under `merge: self` the session checks at the start whether a push or merge
+  to the default branch deploys production on its own (CD workflow, platform auto-deploy). If it
+  does, or the session cannot tell, the run falls back to `merge: human` and the ledger says why.
+  `no` is your statement that it does not; without it a hosted repository usually cannot be told.
+- A PR that touches `protected_paths`, or whose diff takes an operator-only action you have not
+  approved, is never merged by the session, in either mode.
 - `protected` is in addition to the skill's operator-only actions (irreversible, client-facing, money,
   security exception, client production), not a replacement.

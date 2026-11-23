@@ -4,6 +4,10 @@ Every reviewer is a fresh subagent that wrote nothing it reviews. This replaces 
 R1/R2 chain inside a run: one opus review per unit, a second only by exception, and the security
 review once per milestone instead of per unit.
 
+Send each reviewer only its own part of this file: the spec-and-plan reviewer gets that section and
+Rails; a unit reviewer gets Role, Full review, Verdict and Rails; a milestone reviewer gets the
+Milestone section, the Full review checks it names, Verdict and Rails.
+
 ## Spec and plan review (once, opus, before the acceptance checks)
 
 Give it the spec path, the plan path and the overlay path. Never give it the session's reasoning.
@@ -20,8 +24,10 @@ Read the spec and the plan together and report, each with the spec or plan line 
    money, security exception, production).
 4. **Security:** anything in the spec or plan that would let a caller skip a check, gain access, read
    a secret or pass input unsanitized.
-5. **Parallel-safe claims:** for each pair of units the plan runs at once, do they share a file,
-   module, schema or the test environment? Any yes is High.
+5. **Parallel-safe claims:** for each pair of units the plan runs at once: do they share a file,
+   module, schema or migration, does either need the test environment while it is implemented, or
+   can `verify` not run in two worktrees at once (a fixed address, a shared database)? Any yes is
+   High. The definition of done does not count: the orchestrator runs it one unit at a time.
 
 Classify each finding: `derivable` (a cited source settles it), `preference` (reversible, no source
 settles it) or `operator-only`. End with `verdict: accept | findings` and the list.
@@ -29,15 +35,19 @@ settles it) or `operator-only`. End with `verdict: accept | findings` and the li
 ## Unit review (opus, exactly one per unit PR)
 
 Give it the pull request number, the head commit hash, the base commit, the plan path, the unit's
-name, the list of frozen files, and the lessons the unit added. The base is the commit the
-implementer started from, and it already contains the frozen acceptance checks: for a unit that
-started on the checks branch, that is the checks commit, not the default branch. Never give it the
-implementer's summary.
+name, the list of frozen files, the lessons the unit added, and any operator answer that approves an
+operator-only action in this unit. The base is the commit just below the unit's own commits (after a
+rebase, the commit it was rebased onto), and it already contains the frozen acceptance checks: for a
+unit that still stands on the checks branch, that is the checks commit, not the default branch.
+Never give it the implementer's summary.
 
-A second, independent unit review (`fable`) runs only by exception: the problem is genuinely hard,
-the change is complex and touches many areas, or the session is not confident. The session records
-the reason under "Decided". The second reviewer gets the same brief and never sees the first
-verdict or prose.
+A new head (after a fix or a rebase) gets a fresh reviewer and the same brief: the review that
+counts is the one at the hash that merges.
+
+A second, independent unit review (`fable`; opus in a fresh context where that model is not offered)
+runs only by exception: the problem is genuinely hard, the change is complex and touches many areas,
+or the session is not confident. The session records the reason under "Decided". The second reviewer
+gets the same brief and never sees the first verdict or prose.
 
 ### Role
 
@@ -58,7 +68,9 @@ paths. Then do the full review.
    current users would notice? Unless the spec states in words that existing clients will break, it
    is High.
 4. **Operator-only actions:** does the diff delete data, spend money, touch production, or take an
-   action on the overlay's `protected` list? Any yes is High.
+   action on the overlay's `protected` list? Any yes is High. One exception: a deletion, spend or
+   production step that is exactly the action, in exactly the scope, of an operator answer you were
+   given. An action on the `protected` list is never excepted.
 5. **Frozen files:** does the diff add, change or delete a file on the frozen list you were given, or
    any other file in the acceptance checks' directory? Any yes is High. Test files that `verify` runs
    are not frozen: check 2 covers them.
@@ -84,14 +96,19 @@ Reject when any High or Medium finding remains or a task of the unit is not deli
 
 ## Milestone review (opus, at each milestone end)
 
-Two reviewers, each fresh, on the milestone diff (`git diff <milestone base>..<target head>`), never
-per unit:
+A milestone of exactly one unit gets one opus review instead: the unit review plus the capstone
+and security criteria below on that unit's diff, ending with the verdict block; no separate capstone or
+security reviewer. Otherwise two reviewers, each fresh, on the milestone diff (`git diff <milestone base>..<target head>`), once
+per milestone and never per unit. The milestone base is the commit its first unit started from (for
+the first milestone the checks commit, so the frozen checks are not in the diff); the orchestrator
+records it in `state.md` when that unit starts.
 
 - **Capstone:** does the milestone, as merged, deliver its part of the spec and plan; do units
   conflict, duplicate or leave a scenario uncovered? Use the full review's checks 1 to 5 on the
   whole diff.
 - **Security:** `/security-review` when available, else check 7 of the full review on the whole
-  diff. A High finding in code this run wrote becomes one more unit.
+  diff. A High finding in code this run wrote becomes one more unit; that unit gets the unit
+  review, and the milestone reviews do not run again for it.
 
 Both end with the verdict block above, `mode: capstone` or `mode: security`.
 

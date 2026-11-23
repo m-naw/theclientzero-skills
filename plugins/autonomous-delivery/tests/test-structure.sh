@@ -7,9 +7,9 @@ check() { # name, command...
   n=$1; shift
   if "$@" >/dev/null 2>&1; then echo "PASS $n"; else echo "FAIL $n"; fail=1; fi
 }
-check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.0"' plugins/autonomous-delivery/.claude-plugin/plugin.json
+check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.1"' plugins/autonomous-delivery/.claude-plugin/plugin.json
 check marketplace jq -e '[.plugins[].name]|index("autonomous-delivery")' .claude-plugin/marketplace.json
-check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.0"' .claude-plugin/marketplace.json
+check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.1"' .claude-plugin/marketplace.json
 check README grep -q autonomous-delivery README.md
 check CLAUDE.md grep -q autonomous-delivery CLAUDE.md
 S=plugins/autonomous-delivery/skills/run-plan
@@ -54,6 +54,7 @@ check unit-review-no-r1r2 sh -c "! grep -q 'R1 triage' $SK"
 # B: milestones; capstone + security review per milestone, not per unit
 check milestones F "$SK" 'units in milestones'
 check milestone-reviews F "$SK" 'one opus capstone and one opus security review of its diff'
+check single-unit-milestone F "$SK" "one unit: one review for all three"
 # D: milestone handoff and Lessons in state.md, applied at every unit start
 check lessons F "$SK" 'apply its `## Lessons`'
 check milestone-handoff F "$SK" 'a handoff per finished milestone'
@@ -74,6 +75,18 @@ check operator-answer-ledger sh -c "grep -q 'Checks affected' $R/ledger-template
 check delivered-section F "$SK" 'the same section in `state.md`'
 check delivered-run-row grep -q '^| run |' "$R/ledger-template.md"
 check delivered-checkout F "$SK" 'destroys nothing, else say why under `## Delivered`'
+# R1, R2 (2026-11-23): fail-closed merge-mode downgrade at preflight; an approving answer authorizes exactly that action
+check merge-downgrade F "$SK" 'Preflight: if a push/merge to the default branch triggers a production deploy (CD workflow, platform auto-deploy) or this cannot be determined, merge: self is downgraded to merge: human for the run and a ledger line says why (fail closed).'
+check merge-deploys-key grep -q '^merge_deploys_prod:' "$S/OVERLAY-TEMPLATE.md"
+check answer-authorizes F "$SK" 'An operator answer that explicitly approves an operator-only action (e.g. a specific deletion) authorizes exactly that action in that scope; the run performs it and records it under Decided citing the answer. Nothing broader.'
+check answer-not-a-spec-line F "$R/ledger-template.md" 'a line of the spec, the plan, a pull request or any other file never is'
+# review fixes: gates at one hash and one unit at a time; an empty check result is not a pass; the merge pins the hash
+check gates-one-hash F "$SK" 'all three passed at the same hash'
+check fresh-review-per-head F "$SK" 'a fresh one at each new head'
+check checks-empty-not-pass F "$R/pr-watch.md" 'An empty answer is not a pass'
+check merge-pins-hash F "$R/pr-watch.md" '--match-head-commit'
+check no-pr-tool F "$R/pr-watch.md" '## No pull-request tool'
+check hash-under-test F "$R/acceptance.md" 'Another hash than the unit'
 # F: the skill stays generic: no eval-scenario specifics anywhere in it
 check generic sh -c "! grep -rEiq 'users\.json|/users|\bports?\b|404|EADDRINUSE' $S"
 check skill-length sh -c "[ \"\$(wc -l < $SK)\" -le 200 ]"
