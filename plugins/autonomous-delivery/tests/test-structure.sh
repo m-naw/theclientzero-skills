@@ -7,9 +7,9 @@ check() { # name, command...
   n=$1; shift
   if "$@" >/dev/null 2>&1; then echo "PASS $n"; else echo "FAIL $n"; fail=1; fi
 }
-check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.1"' plugins/autonomous-delivery/.claude-plugin/plugin.json
+check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.2"' plugins/autonomous-delivery/.claude-plugin/plugin.json
 check marketplace jq -e '[.plugins[].name]|index("autonomous-delivery")' .claude-plugin/marketplace.json
-check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.1"' .claude-plugin/marketplace.json
+check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.2"' .claude-plugin/marketplace.json
 check README grep -q autonomous-delivery README.md
 check CLAUDE.md grep -q autonomous-delivery CLAUDE.md
 S=plugins/autonomous-delivery/skills/run-plan
@@ -68,6 +68,7 @@ check pr-watch-log-tail F "$R/pr-watch.md" '--log-failed | tail'
 check pr-watch-two-fixes F "$R/pr-watch.md" 'At most 2 fix attempts per PR'
 check pr-watch-no-weakening F "$R/pr-watch.md" 'Never "fix" it by weakening, skipping or deleting a test, or by editing CI configuration'
 check pr-watch-never-automerge F "$R/pr-watch.md" 'Never auto-merge, and ledger instead'
+check progress-in-state F "$SK" 'to `## Progress` in `state.md` (newest last, one line each)'
 # 1: an operator answer re-freezes only the check ids recorded with it, via the fresh-author path
 check operator-answer-refreeze F "$SK" 'only the check ids the ledger records with that answer, never others'
 check operator-answer-ledger sh -c "grep -q 'Checks affected' $R/ledger-template.md && grep -q 'operator answer' $R/acceptance.md"

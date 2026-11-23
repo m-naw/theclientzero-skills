@@ -35,8 +35,7 @@ While a run is active this Flow wins: never present another skill's option menu 
    (`gh` when available), `verify` passes, overlay complete. Record in `state.md` the hash
    (`git hash-object`) of the overlay and of the scripts behind `deploy_test`, `acceptance`,
    `monitor`, `teardown` and `rollback`, not of tests. A red default branch outside the spec's scope
-   is a ledger item; with `merge: self`, start no unit that would merge into it.
-   Preflight: if a push/merge to the default branch triggers a production deploy (CD workflow,
+   is a ledger item; with `merge: self`, start no unit that would merge into it. Preflight: if a push/merge to the default branch triggers a production deploy (CD workflow,
    platform auto-deploy) or this cannot be determined, merge: self is downgraded to merge: human for
    the run and a ledger line says why (fail closed). `references/pr-watch.md` says how to tell.
 2. **Plan and review.** The spec is not assumed right. Write the plan (`superpowers:writing-plans`
@@ -74,11 +73,11 @@ While a run is active this Flow wins: never present another skill's option menu 
    A fix is a new commit and repeats from 1 at the new hash, with a fresh review; each gate gets at
    most 2 fix rounds per unit, counted in `state.md`. A unit that ends **not done**, is held, or
    whose implementer reports `blocked`, is not merged: ledger it, skip its dependents, continue with
-   independent units. Then write its status, `## Delivered` row and lessons to `state.md`, and print
+   independent units. Then write its status, `## Delivered` row and lessons to `state.md`, and log
    the progress line. No subagents: CP solo mode, nothing passes PROPOSED, nothing merges.
 5. **Milestone end.** The milestone reviews (`## Review`): a High finding in code this run wrote is
    one more unit, or a "Waiting on you" item if its fix adds a mechanism the spec does not ask for
-   (auth, a permission model). Then the handoff and lessons (`## Resume`), and the progress line.
+   (auth, a permission model). Then the handoff and lessons (`## Resume`), and log the progress line.
 6. **Production.** Per overlay `prod`. `human` (default): a "Waiting on you" item with a business-
    language summary, its risk, and the exact deploy command. `auto` only for the risk classes it names.
 7. **Run end.** With `merge: human`: merge the default branch into the integration branch (a
@@ -155,10 +154,11 @@ row per unit and one `run` row; the same section in `state.md`; update both when
 or ends). Keep `.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` covers it).
 
 - Progress: at each unit end and milestone end print exactly one line, `Unit k/N (p%) — milestone
-  m/M — PR #n: CI green|red|merged — <outcome> — waiting on you: <count>`. No other chatter. Any
-  other message to the operator starts with "Waiting on you", even when it is empty ("none").
-- When you add an item and a push-notification tool exists, send one notification with its first line.
-- A "Waiting on you" item leaves, to "Decided" with the evidence, only when its clearing step happened.
+  m/M — PR #n: CI green|red|merged — <outcome> — waiting on you: <count>`, and append the same line,
+  prefixed with a UTC timestamp, to `## Progress` in `state.md` (newest last, one line each). No other
+  chatter; any other operator message starts with "Waiting on you", even when empty ("none").
+- A new item with a push-notification tool available: send one notification with its first line.
+- A "Waiting on you" item moves to "Decided", with evidence, only when its clearing step happened.
 
 ## Review
 

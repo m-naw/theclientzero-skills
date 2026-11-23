@@ -2,9 +2,9 @@
 # Run one subject and grade it.
 # Usage: run-subject.sh <run_dir> <arm A|B|C> <scenario S1..S4> <port> <clean_config_dir>
 # Env: JUDGE_CONFIG_DIR (clean authenticated config dir, for S3/S4 grading), CLAUDE_BIN (default claude),
-#      RUN_TIMEOUT (seconds, default 900), BUDGET_USD (default 2.00).
+#      LINGER_GRACE (seconds after the result event before a still-running process is killed, default 20), RUN_TIMEOUT (seconds, default 900), BUDGET_USD (default 2.00).
 # Exit: 0 graded, 2 no auth (never scored), 3 judge error (from assert-delivery.sh), 1 other failure.
-# Writes <run_dir>/{repo,remote.git,loaded-skill.md (B/C only),meta/{stream.jsonl,init.json,reply.md,exit,timed_out,stderr.log},grade.json}.
+# Writes <run_dir>/{repo,remote.git,loaded-skill.md (B/C only),meta/{stream.jsonl,init.json,reply.md,exit,timed_out,lingering_children,stderr.log},grade.json}.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN="$HERE/../../plugins/autonomous-delivery/skills/run-plan"
@@ -35,17 +35,22 @@ kill_tree() { for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c"; done; ki
     --allowedTools "Bash,Edit,Write,Read,Grep,Glob,Task" \
     < /dev/null > "$RUN/meta/stream.jsonl" 2> "$RUN/meta/stderr.log" ) &
 PID=$!
-T0=$(date +%s); TIMED=false
+T0=$(date +%s); TIMED=false; LINGER=false; RES_AT=""
+has_result() { grep -q '"type":"result"' "$RUN/meta/stream.jsonl" 2>/dev/null; }
+stop_tree() { kill_tree "$PID"; sleep 2; kill -0 "$PID" 2>/dev/null && kill -9 "$PID" 2>/dev/null; }
 while kill -0 "$PID" 2>/dev/null; do
-  if [ $(( $(date +%s) - T0 )) -ge "${RUN_TIMEOUT:-900}" ]; then
-    TIMED=true; kill_tree "$PID"; sleep 2
-    kill -0 "$PID" 2>/dev/null && kill -9 "$PID" 2>/dev/null
-    break
+  NOW=$(date +%s)
+  # timed_out = the cap fired before the final result event; a result followed by a process that will not exit is lingering_children
+  [ -z "$RES_AT" ] && has_result && RES_AT=$NOW
+  if [ -n "$RES_AT" ] && [ $(( NOW - RES_AT )) -ge "${LINGER_GRACE:-20}" ]; then LINGER=true; stop_tree; break; fi
+  if [ $(( NOW - T0 )) -ge "${RUN_TIMEOUT:-900}" ]; then
+    if has_result; then LINGER=true; else TIMED=true; fi
+    stop_tree; break
   fi
   sleep 1
 done
 wait "$PID"; RC=$?
-echo "$RC" > "$RUN/meta/exit"; echo "$TIMED" > "$RUN/meta/timed_out"
+echo "$RC" > "$RUN/meta/exit"; echo "$TIMED" > "$RUN/meta/timed_out"; echo "$LINGER" > "$RUN/meta/lingering_children"
 
 EV=$(jq -R 'fromjson? // empty' "$RUN/meta/stream.jsonl" | jq -s -c '.')
 printf "%s" "$EV" | jq -c "[.[] | select(.type==\"system\" and .subtype==\"init\")] | first // {}" > "$RUN/meta/init.json"

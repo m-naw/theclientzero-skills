@@ -255,6 +255,7 @@ case "$MODE" in
   auth) echo '{"type":"result","is_error":true,"result":"Not logged in - Please run /login"}'; exit 1 ;;
   empty) exit 1 ;;
   hang) echo '{"type":"system","subtype":"init"}'; sleep 60 ;;
+  linger) echo '{"type":"result","subtype":"success","is_error":false,"result":"Done. All delivered."}'; sleep 60 ;;
 esac
 STUB
 chmod +x "$T/stub-run"
@@ -297,6 +298,13 @@ CLAUDE_BIN="$T/stub-run" sh "$RS" "$T/rs-nocfg" A S1 "$(freeport)" "$T/missing" 
 # timeout: hung subject is killed at the deadline, run still graded, tree gone
 T0=$(date +%s); RUN_TIMEOUT=2 rs rs-hang A S1 hang; EL=$(( $(date +%s) - T0 ))
 [ $RSRC -eq 0 ] && [ "$(cat "$T/rs-hang/meta/timed_out")" = true ] && [ -f "$T/rs-hang/grade.json" ] && [ $EL -lt 40 ] && ok "timeout kills subject, records timed_out, still grades" || nope "timeout path (rc=$RSRC, ${EL}s)"
+# result already written but the process lingers: killed after the grace, not timed_out
+T0=$(date +%s); LINGER_GRACE=2 rs rs-linger A S1 linger; EL=$(( $(date +%s) - T0 ))
+[ $RSRC -eq 0 ] && [ "$(cat "$T/rs-linger/meta/timed_out")" = false ] && [ "$(cat "$T/rs-linger/meta/lingering_children")" = true ] && [ "$(cat "$T/rs-linger/meta/reply.md")" = "Done. All delivered." ] && [ -f "$T/rs-linger/grade.json" ] && [ $EL -lt 40 ] && ok "lingering process after result: lingering_children, not timed_out" || nope "linger path (rc=$RSRC, ${EL}s)"
+# cap fires after the result: still lingering_children
+LINGER_GRACE=100 RUN_TIMEOUT=2 rs rs-linger2 A S1 linger
+[ "$(cat "$T/rs-linger2/meta/timed_out")" = false ] && [ "$(cat "$T/rs-linger2/meta/lingering_children")" = true ] && ok "cap after result is lingering_children" || nope "cap after result is lingering_children"
+[ "$(cat "$T/rs-hang/meta/lingering_children")" = false ] && [ "$(cat "$T/rs-A/meta/lingering_children")" = false ] && ok "hang and clean runs: lingering_children=false" || nope "lingering_children=false on hang and clean runs"
 # batch: distinct ports, layout, summary
 setmode ok; B="$T/batch"; SUBJECT_CONFIG_DIR="$T/subjcfg" CLAUDE_BIN="$T/stub-run" sh "$RB" -p 19000 A,B S1 2 "$B" >/dev/null 2>&1; BRC=$?
 [ $BRC -eq 0 ] && [ -f "$B/S1-A-1/grade.json" ] && [ -f "$B/S1-B-2/grade.json" ] && [ "$(wc -l < "$B/summary.jsonl")" -eq 4 ] \

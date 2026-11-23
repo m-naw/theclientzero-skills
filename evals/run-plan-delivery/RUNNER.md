@@ -26,7 +26,7 @@ A run whose result is an auth error, or whose stream is empty with a non-zero ex
 sh run-subject.sh <run_dir> <A|B|C> <S1..S4> <port> <subject_cfg>   # needs JUDGE_CONFIG_DIR for S3/S4
 ```
 
-It builds the workspace (`setup-workspace.sh`), assembles the prompt (identical task text; B and C add one sentence pointing at `<run_dir>/loaded-skill.md`), runs the subject, saves `meta/stream.jsonl`, `meta/init.json`, `meta/reply.md`, `meta/exit`, `meta/timed_out`, grades with `assert-delivery.sh` into `<run_dir>/grade.json`, and kills the blocker and any deployed server. Exit 0 graded, 2 no auth, 3 judge error. `RUN_TIMEOUT` (seconds, default 900) and `BUDGET_USD` (default 2.00) are overridable for dry runs only.
+It builds the workspace (`setup-workspace.sh`), assembles the prompt (identical task text; B and C add one sentence pointing at `<run_dir>/loaded-skill.md`), runs the subject, saves `meta/stream.jsonl`, `meta/init.json`, `meta/reply.md`, `meta/exit`, `meta/timed_out`, `meta/lingering_children`, grades with `assert-delivery.sh` into `<run_dir>/grade.json`, and kills the blocker and any deployed server. Exit 0 graded, 2 no auth, 3 judge error. `RUN_TIMEOUT` (seconds, default 900) and `BUDGET_USD` (default 2.00) are overridable for dry runs only.
 
 Use `out_dir` = `/tmp/rp-runs/<name>`, never a path under `$HOME`: Claude Code discovers CLAUDE.md files in every ancestor directory of the cwd, so a run dir under `~` would load the operator's own instructions into the baseline arm. `/tmp` has none. The run directory path also appears in the subject's prompt, so it must not contain `eval`, `test`, `arm`, `trap` or `hidden`.
 

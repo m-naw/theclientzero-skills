@@ -70,3 +70,7 @@ Registered 2026-11-22, before any v0.2 run. This section adds to the Design abov
 ### Deviation 2026-11-23 (before the v0.3.1 measurement): account-provisioned skills accepted
 
 The claude.ai account now injects `anthropic-skills:*` skill listings (document formats: docs, docx, pptx, …) into every session, independent of the config dir. Like the organization instructions (2026-11-22), they are identical in both arms, so the probe now ignores them. Because the v0.2 arm-A baseline may have run without them, the v0.3.1 measurement reruns both arms (A,B × S1–S4 × n=4) in the same session context; the v0.3.1 verdict uses that same-day A, not the v0.2 A. Cost if wrong: if these skills change delivery behaviour, they change it in both arms.
+
+### Harness note 2026-11-23 (after the v0.3.1 run, harness-only)
+
+`meta/timed_out` was `true` on runs that had already produced their final `result` event (v0.3.1 S1-B-1, S2-B-1, S4-B-3; v0.2 S2-B-1, S2-B-2): the `claude` process stayed alive after its result (likely held by the subject's own background server or child) until the wall-clock cap fired. `run-subject.sh` now sets `timed_out=true` only when the cap fires before a `result` event; when the result exists and the process lingers past `LINGER_GRACE` (20 s) or the cap, it is killed and `meta/lingering_children=true` is recorded instead. Existing cleanup still kills the deployed server. Grading, `correct` and every recorded grade are unchanged; no earlier result is rewritten. No effect on correctness.
