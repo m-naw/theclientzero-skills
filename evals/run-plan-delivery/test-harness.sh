@@ -200,6 +200,16 @@ dl "$R" main "$(git -C "$R" rev-parse --short main)"; grade g-dlu S1 ok
 # run row at base and the unit ref also fails to resolve: stays "ledger" (base graded)
 R=$(ws S1 g-dlu2 $gp); patch_in "$R" S1; dl "$R" main "$(git -C "$R" rev-parse --short main)"; sed -i 's/`u1`/`gone`/' "$R/.run-plan/ledger.md"; grade g-dlu2 S1 ok
 [ "$(gj "$T/g-dlu2" .graded_ref_source)" = ledger ] && [ "$(gj "$T/g-dlu2" .correct)" = false ] && ok "run row at base, unit ref unresolvable: base graded, source ledger" || nope "run row at base, unit ref unresolvable: base graded, source ledger"
+# run row = base + a doc-only commit (v0.3.2 S4-B-2 layout): the unit ref is graded
+R=$(ws S1 g-dld $gp); patch_in "$R" S1; gitc "$R" checkout -q -b u1; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main
+mkdir -p "$R/.run-plan" "$R/docs"; echo p > "$R/docs/plan.md"; echo n > "$R/NOTES.md"; gitc "$R" add -A; gitc "$R" commit -q -m plan
+dl "$R" main "$(git -C "$R" rev-parse --short main)"; grade g-dld S1 ok
+[ "$(gj "$T/g-dld" .graded_ref | cut -d@ -f1)" = branch:u1 ] && [ "$(gj "$T/g-dld" .graded_ref_source)" = ledger-unit ] && [ "$(gj "$T/g-dld" .correct)" = true ] && ok "run row = base + doc-only commit: unit ref graded (ledger-unit)" || nope "run row = base + doc-only commit: unit ref graded (ledger-unit)"
+# run row has a code change beyond base: it is graded, unit row ignored
+R=$(ws S1 g-dlc2 $gp); patch_in "$R" S1; gitc "$R" checkout -q -b u1; gitc "$R" add -A; gitc "$R" commit -q -m w; gitc "$R" checkout -q main; gitc "$R" checkout -q -b run-x u1; gitc "$R" checkout -q main
+echo "// c" >> "$R/server.js"; gitc "$R" checkout -q run-x; echo "// c" >> "$R/server.js"; gitc "$R" commit -qam code; gitc "$R" checkout -q main
+dl "$R" run-x "$(git -C "$R" rev-parse --short run-x)"; grade g-dlc2 S1 ok
+[ "$(gj "$T/g-dlc2" .graded_ref | cut -d@ -f1)" = branch:run-x ] && [ "$(gj "$T/g-dlc2" .graded_ref_source)" = ledger ] && ok "run row with code change: run ref graded" || nope "run row with code change: run ref graded"
 # run ref is not base: unit rows ignored
 [ "$(gj "$T/g-dl" .graded_ref_source)" = ledger ] && ok "run ref beyond base: unit rows ignored" || nope "run ref beyond base: unit rows ignored"
 # self-report cannot make broken work pass: the ledger names a base-only branch, the correct work sits in the tree

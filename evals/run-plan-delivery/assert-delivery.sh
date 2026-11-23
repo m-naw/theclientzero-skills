@@ -2,7 +2,7 @@
 # Usage: assert-delivery.sh <run_dir> <scenario S1..S4> [port]
 # Grades <run_dir>/repo as left (working tree, committed or not) and writes <run_dir>/grade.json.
 # Delivered state, first: if .run-plan/ledger.md (else .run-plan/state.md) has a "## Delivered" table whose `run` row names a
-# local branch (preferred) or commit, that ref is graded in a throwaway clone and graded_ref_source is "ledger"; if that ref is the base commit, the last unit row's branch/commit is graded instead ("ledger-unit"). Else the heuristic:
+# local branch (preferred) or commit, that ref is graded in a throwaway clone and graded_ref_source is "ledger"; if that ref has no code change beyond base (nothing, or only markdown / .run-plan/ / docs/ files), the last unit row's branch/commit is graded instead ("ledger-unit"). Else the heuristic:
 # if HEAD is still base and exactly one local branch has commits beyond base, that branch's tip is graded
 # (a throwaway local clone in a temp dir with meta/base.sha beside it, as the hidden tests expect; the subject's repo is not touched) and recorded as graded_ref. Else the working tree.
 # Reads <run_dir>/meta/stream.jsonl (claude stream-json) and <run_dir>/meta/reply.md.
@@ -36,9 +36,10 @@ for F in "$REPO/.run-plan/ledger.md" "$REPO/.run-plan/state.md"; do
   if [ -n "$LB" ] && $G show-ref --verify --quiet "refs/heads/$LB"; then SHA=$($G rev-parse "refs/heads/$LB"); LBL="branch:$LB"
   elif printf '%s' "$LC" | grep -Eqx '[0-9a-f]{7,40}' && SHA=$($G rev-parse --verify --quiet "$LC^{commit}"); then LBL=commit
   else continue; fi
-  # run ref is still the base (a correctly unmerged unit leaves main there): grade the most recent unit-level ref listed
+  # run ref is still the base, or only a doc-only commit past it (markdown, .run-plan/, docs/): a correctly unmerged unit leaves
+  # main there, so grade the most recent unit-level ref listed
   GSRC_NEW=ledger
-  if [ "$SHA" = "$($G rev-parse "$BASE^{commit}")" ]; then
+  if [ -z "$($G diff --name-only "$BASE" "$SHA" -- 2>/dev/null | grep -Ev '\.md$|^\.run-plan/|^docs/')" ]; then
     UB=$(printf '%s\n' "$ROW" | sed -n 3p); UC=$(printf '%s\n' "$ROW" | sed -n 4p)
     if [ -n "$UB" ] && USHA=$($G rev-parse --verify --quiet "refs/heads/$UB^{commit}"); then SHA=$USHA; LBL="branch:$UB"; GSRC_NEW=ledger-unit
     elif printf '%s' "$UC" | grep -Eqx '[0-9a-f]{7,40}' && USHA=$($G rev-parse --verify --quiet "$UC^{commit}"); then SHA=$USHA; LBL=commit; GSRC_NEW=ledger-unit; fi
