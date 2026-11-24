@@ -7,9 +7,9 @@ check() { # name, command...
   n=$1; shift
   if "$@" >/dev/null 2>&1; then echo "PASS $n"; else echo "FAIL $n"; fail=1; fi
 }
-check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.3"' plugins/autonomous-delivery/.claude-plugin/plugin.json
+check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.4"' plugins/autonomous-delivery/.claude-plugin/plugin.json
 check marketplace jq -e '[.plugins[].name]|index("autonomous-delivery")' .claude-plugin/marketplace.json
-check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.3"' .claude-plugin/marketplace.json
+check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.4"' .claude-plugin/marketplace.json
 check README grep -q autonomous-delivery README.md
 check CLAUDE.md grep -q autonomous-delivery CLAUDE.md
 S=plugins/autonomous-delivery/skills/run-plan

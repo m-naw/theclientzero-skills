@@ -1,4 +1,4 @@
-# run-plan flow (v0.3.3)
+# run-plan flow (v0.3.4)
 
 ASCII map of `plugins/autonomous-delivery/skills/run-plan/SKILL.md`. `[if …]` = conditional,
 `(model)` = who does it, `⇒ ledger` = a "Waiting on you" item; the run continues.
@@ -92,7 +92,8 @@ Always, at every step:
     security exception) ⇒ ledger; [if operator approved it] do exactly that
   • never break a contract silently → ship additively (new field/version)
   • never edit/weaken/skip a frozen check, script, or test
-  • every unit start: re-read SKILL.md + state.md (+ Lessons); never stop for context
+  • every unit start: re-read state.md (+ Lessons); SKILL.md at milestone start
+    and after compaction; never stop for context
 
 Files: .run-plan/state.md  = phase, units, hashes, Delivered, Progress, handoffs, Lessons
        .run-plan/ledger.md = Waiting on you · Decided · Follow-ups · Delivered

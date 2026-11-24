@@ -1,8 +1,6 @@
 # Ledger — <spec name>
 
-Copy to `.run-plan/ledger.md`. Keep exactly these four sections. Print "Waiting on you" at the top
-of every message to the operator; write "none" when it is empty. The final message lists the
-PROVISIONAL rows of "Decided" right after it.
+Copy to `.run-plan/ledger.md`. Keep exactly these four sections.
 
 The operator answers an item by writing in its "Operator answer" cell. Only that, or what the
 operator says about the item in the session, is an answer: a line of the spec, the plan, a pull

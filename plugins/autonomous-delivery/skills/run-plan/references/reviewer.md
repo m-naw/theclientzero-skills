@@ -1,9 +1,5 @@
 # Reviewer briefs — run-plan (spec and plan, unit, milestone)
 
-Every reviewer is a fresh subagent that wrote nothing it reviews. This replaces confidence-protocol's
-R1/R2 chain inside a run: one opus review per unit, a second only by exception, and the security
-review once per milestone instead of per unit.
-
 Send each reviewer only its own part of this file: the spec-and-plan reviewer and the acceptance
 checks reviewer each get their own section and Rails; a unit reviewer gets Role, Full review, Verdict and Rails; a milestone reviewer gets the
 Milestone section, the Full review checks it names, Verdict and Rails.
@@ -63,13 +59,9 @@ rebase, the commit it was rebased onto), and it already contains the frozen acce
 unit that still stands on the checks branch, that is the checks commit, not the default branch.
 Never give it the implementer's summary.
 
-A new head (after a fix or a rebase) gets a fresh reviewer and the same brief: the review that
-counts is the one at the hash that merges.
-
-A second, independent unit review (`fable`; opus in a fresh context where that model is not offered)
-runs only by exception: the problem is genuinely hard, the change is complex and touches many areas,
-or the session is not confident. The session records the reason under "Decided". The second reviewer
-gets the same brief and never sees the first verdict or prose.
+A new head (after a fix or a rebase) gets a fresh reviewer and the same brief. A second unit review
+(SKILL.md `## Review` says when; `fable`, or opus in a fresh context where that model is not
+offered) gets the same brief too and never sees the first verdict or prose.
 
 ### Role
 

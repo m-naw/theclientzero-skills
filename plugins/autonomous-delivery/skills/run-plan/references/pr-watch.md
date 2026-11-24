@@ -1,8 +1,7 @@
 # PR watch — owning a unit's pull request until it merges
 
-The orchestrator owns every unit PR until it is merged or ledgered. This file says how to settle the
-merge mode at preflight, take units through the gates one at a time, wait for checks, fix a red
-check, follow a moving target, and merge, without spending the orchestrator's context on logs.
+The orchestrator owns every unit PR until it is merged or ledgered, without spending its own context
+on logs.
 
 ## Preflight: does a merge into the default branch deploy production?
 
@@ -33,10 +32,8 @@ final pull request is a "Waiting on you" item with the exact command or URL.
 
 ## The unit's turn
 
-Implementation runs in parallel. The gates (review, checks, definition of done) and the merge run
-for one unit at a time, in dependency order and otherwise in the order the implementers finish. So
-the run's own merges never move the target under a unit that is being verified, and the head that
-merges is the head that passed.
+The gates (review, checks, definition of done) and the merge run for one unit at a time, in
+dependency order and otherwise in the order the implementers finish.
 
 At the start of its turn, if the target moved since the unit branched (another unit merged, or
 someone pushed), rebase the unit branch onto the target's tip in its worktree and resolve conflicts
@@ -97,6 +94,5 @@ Such a unit is held: its status stands, and its dependents are skipped.
 After a merge: update the local target (`git fetch`, then `git merge --ff-only` where it is checked
 out), remove the unit's worktree (`git worktree remove`), and update both `## Delivered` sections.
 
-The progress line is printed once, at unit end, with the PR's last state: `PR #<n>: CI green`,
-`CI red`, or `merged`. In it `k` counts the units that have ended, whatever their status, and `p` is
-`k/N`. Send no message per state change.
+The progress line carries the PR's last state. In it `k` counts the units that have ended, whatever
+their status, and `p` is `k/N`. Send no message per state change.

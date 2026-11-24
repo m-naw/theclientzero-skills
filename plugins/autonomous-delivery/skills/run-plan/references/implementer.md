@@ -24,7 +24,7 @@ open one pull request into the target branch.
 ## Read first
 
 1. The plan's "how to run" section (or its closest equivalent), then the section for your unit.
-2. The Lessons you were given. They record what went wrong in earlier units.
+2. The Lessons you were given.
 3. The overlay (`.claude/run-plan.md`): `verify`, `risk` and `protected`.
 
 ## Precedence

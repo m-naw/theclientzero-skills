@@ -1,6 +1,6 @@
 {
   "name": "autonomous-delivery",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger.",
   "author": {
     "name": "m-naw",

@@ -7,8 +7,7 @@ description: Use when the operator hands over a spec and wants it delivered to d
 
 ## Overview
 
-Delivers a spec end to end, alone and overnight if needed: spec and plan review, acceptance checks,
-reviewed units in milestones, test deploy, acceptance, monitoring, production gate. It prevents:
+Delivers a spec end to end, alone and overnight if needed. It prevents:
 
 1. **False done:** done without proof that it works after deploy. Done means the spec's acceptance
    scenarios pass against a deployed environment, by checks the implementer did not write or edit.
@@ -50,8 +49,7 @@ While a run is active this Flow wins: never present another skill's option menu 
    writes the checks, briefed with `references/acceptance.md`: one per scenario, named by its id. It
    runs them against the base, deployed with `deploy_test`: every new check must fail; one the base
    already satisfies stays only as a named `guard`. One opus reviewer that wrote no check reviews
-them (`## Review`), a fresh author fixes findings. Freeze them as that file says (its commit holds
-   only checks; red output, file hashes and each id's owning unit go to `state.md`). If the base
+   them (`## Review`), a fresh author fixes findings. Freeze them as that file says. If the base
    cannot be deployed, never work around it: freeze the checks as `red: not shown`, ledger a cause
    outside the code, and continue. A frozen check is rewritten only by that file's re-freeze steps,
    when it contradicts a cited spec line or a rail, or when an operator answer changes required
@@ -147,10 +145,9 @@ the only operator channel: no PR comments or issues addressed to the operator.
 ## Ledger
 
 `.run-plan/ledger.md`, from `references/ledger-template.md`, has exactly four sections:
-`## Waiting on you` (the exact step that clears each item; the operator's answer), `## Decided`
-(the citing source; PROVISIONAL rows add how to reverse), `## Follow-ups` and `## Delivered` (one
-row per unit and one `run` row; the same section in `state.md`; update both whenever a unit merges
-or ends). Keep `.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` covers it).
+`## Waiting on you`, `## Decided`, `## Follow-ups` and `## Delivered` (one row per unit and one
+`run` row; the same section in `state.md`; update both whenever a unit merges or ends). Keep
+`.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` covers it).
 
 - Progress: at each unit end and milestone end print exactly one line, `Unit k/N (p%) — milestone
   m/M — PR #n: CI green|red|merged — <outcome> — waiting on you: <count>`, and append the same line,
@@ -163,9 +160,9 @@ or ends). Keep `.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` 
 
 Every reviewer is a fresh subagent that wrote nothing it reviews, briefed with `references/reviewer.md`.
 
-- **Spec and plan:** once, before the checks, one opus reviewer reads spec and plan together for consistency, security,
-  spec gaps (missing or contradictory scenarios, contract or data risks, unstated operator-only
-  actions) and parallel-safe claims. Up to 2 rounds; still disputed becomes a PROPOSED record.
+- **Spec and plan:** once, before the checks, one opus reviewer reads spec and plan together for
+  consistency, security, spec gaps and parallel-safe claims. Up to 2 rounds; still disputed becomes
+  a PROPOSED record.
 - **Acceptance checks:** once, before freezing, one opus reviewer: coverage, vacuous pass, observable
   behaviour, red for the right reason. Up to 2 rounds; never blocks.
 - **Unit:** exactly one opus review per unit PR, at its head hash, and a fresh one at each new head.
@@ -185,9 +182,10 @@ and `## Lessons` (one generic line per thing that went wrong or surprised). Upda
   Pass `model` on every dispatch: haiku for tests, builds, greps, deploys, check watching; sonnet
   for implementation, fixes, acceptance checks; opus for every `## Review` and units on a `risk`
   path; fable only for an exceptional second unit review. Effort medium (high: security, `risk`).
-- Never stop for context. Auto-compaction may replace earlier turns: at every unit start, re-read
-  this SKILL.md and `state.md`, apply its `## Lessons`, and trust `state.md` over your memory.
-- On `/run-plan continue` (after a `/clear` or not): read `state.md`, the ledger and the overlay;
+- Never stop for context. Auto-compaction may replace earlier turns: at every unit start re-read
+  `state.md`, apply its `## Lessons`, and trust it over your memory. Re-read this SKILL.md at each
+  milestone start and whenever earlier turns were compacted or its text is not fully in context.
+- On `/run-plan continue`: read `state.md`, the ledger and the overlay;
   check what landed (`git log`, open PRs, deployed state) before repeating any step. Act on each
   operator answer first (do exactly what it approves; record the check ids it affects and re-freeze
   only those per Flow 3), then carry on from "next step".

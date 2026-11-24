@@ -1,8 +1,7 @@
 # Acceptance — run-plan checks and how to run them
 
-Part 1 is the brief for the acceptance author. Between the parts: how the orchestrator freezes and
-re-freezes the checks. Part 2 is how the orchestrator, or a haiku subagent it sends, runs the steps of
-the definition of done; the orchestrator reads the output and decides.
+The orchestrator, or a haiku subagent it sends, runs Part 2's steps; the orchestrator reads the
+output and decides.
 
 ## Part 1 — author brief
 
@@ -26,10 +25,9 @@ response shape ships beside the old one.
    on, check the new shape where the plan puts it, and add a `guard` check that the old shape still
    answers as on the base.
 4. Run `deploy_test` on the base exactly as the overlay gives it, then the checks. Every new check
-   must fail because the behaviour is absent (the feature is missing, a field is missing), not because the check is
-   broken (a typo, a wrong path). A `guard` check passes on the base. So does a scenario the base
-   already satisfies (an input the base already rejects as the spec asks): keep it as a `guard` and say so. Never bend
-   a check to force a failure.
+   must fail because the behaviour is absent, not because the check is broken. A `guard` check
+   passes on the base. So does a scenario the base already satisfies (an input the base already
+   rejects as the spec asks): keep it as a `guard` and say so. Never bend a check to force a failure.
 5. If `deploy_test` fails, stop and report its output. Never retry it with other settings, free a
    resource another process holds, stop a process you did not start, or deploy anywhere else.
 6. Commit only the checks. Do not touch application code, the overlay or the scripts it runs.
