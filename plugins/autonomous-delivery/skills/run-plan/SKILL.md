@@ -49,7 +49,8 @@ While a run is active this Flow wins: never present another skill's option menu 
    default; units start there until one has merged). There a fresh subagent that implements no unit
    writes the checks, briefed with `references/acceptance.md`: one per scenario, named by its id. It
    runs them against the base, deployed with `deploy_test`: every new check must fail; one the base
-   already satisfies stays only as a named `guard`. Freeze them as that file says (its commit holds
+   already satisfies stays only as a named `guard`. One opus reviewer that wrote no check reviews
+them (`## Review`), a fresh author fixes findings. Freeze them as that file says (its commit holds
    only checks; red output, file hashes and each id's owning unit go to `state.md`). If the base
    cannot be deployed, never work around it: freeze the checks as `red: not shown`, ledger a cause
    outside the code, and continue. A frozen check is rewritten only by that file's re-freeze steps,
@@ -63,8 +64,7 @@ While a run is active this Flow wins: never present another skill's option menu 
    (`references/implementer.md`), a branch from the target's tip (or the checks branch), one PR into
    the target, owned until it merges or is ledgered, per `references/pr-watch.md`. Then its turn:
    if the target moved since the unit branched, rebase first; then, on that one head:
-   1. The unit review (`## Review`), with base = the commit just below the unit's own commits (it
-      holds the checks).
+   1. The unit review (`## Review`), base = the commit just below the unit's own (it holds checks).
    2. Required checks green (`references/pr-watch.md`); where none report on the PR, `verify`.
    3. `## Definition of done`.
    4. Merge into the target only when all three passed at the same hash, never a PR that touches
@@ -110,9 +110,8 @@ head, before the unit merges; `references/acceptance.md` says how to run and rec
 2. One deploy at a time (teardown per `references/acceptance.md`), then `deploy_test` → `acceptance`
    → `monitor` for its window. Acceptance passed only when every scenario id of this unit and of the
    units merged before it shows as passed. A scenario with no check failed.
-3. A step that fails, times out, errors, or is skipped or not run counts as failed, whatever the
-   cause (a resource in use, an expired credential, a flaky environment). A failed step may be rerun
-   once unchanged; report both outputs.
+3. A step that fails, times out, errors, is skipped or not run has failed, whatever the cause (a
+   resource in use, an expired credential, a flaky environment). Rerun once unchanged; report both.
 4. On failure: fix with data (logs, monitor output, screenshots), at most 2 rounds. Then run the
    overlay's `rollback` if declared (with `rollback: none`, never revert on your own) and add a
    "Waiting on you" item with the evidence. A cause outside the code (environment, credentials) goes
@@ -164,10 +163,11 @@ or ends). Keep `.run-plan/` out of git (`.git/info/exclude` unless `.gitignore` 
 
 Every reviewer is a fresh subagent that wrote nothing it reviews, briefed with `references/reviewer.md`.
 
-- **Spec and plan:** once, before the checks, one opus reviewer reads spec and plan together for
-  consistency, security and spec gaps (missing or contradictory scenarios, contract or data risks,
-  unstated operator-only actions), and each parallel-safe claim of the plan. Up to 2 rounds; what is
-  still disputed becomes a PROPOSED record.
+- **Spec and plan:** once, before the checks, one opus reviewer reads spec and plan together for consistency, security,
+  spec gaps (missing or contradictory scenarios, contract or data risks, unstated operator-only
+  actions) and parallel-safe claims. Up to 2 rounds; still disputed becomes a PROPOSED record.
+- **Acceptance checks:** once, before freezing, one opus reviewer: coverage, vacuous pass, observable
+  behaviour, red for the right reason. Up to 2 rounds; never blocks.
 - **Unit:** exactly one opus review per unit PR, at its head hash, and a fresh one at each new head.
   A second, independent review (fable) only when the problem is genuinely hard, the change is
   complex and touches many areas, or you are not confident; record that reason under "Decided".

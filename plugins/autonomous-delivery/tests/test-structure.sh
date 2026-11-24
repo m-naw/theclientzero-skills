@@ -7,9 +7,9 @@ check() { # name, command...
   n=$1; shift
   if "$@" >/dev/null 2>&1; then echo "PASS $n"; else echo "FAIL $n"; fail=1; fi
 }
-check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.2"' plugins/autonomous-delivery/.claude-plugin/plugin.json
+check plugin.json jq -e '.name=="autonomous-delivery" and .version=="0.3.3"' plugins/autonomous-delivery/.claude-plugin/plugin.json
 check marketplace jq -e '[.plugins[].name]|index("autonomous-delivery")' .claude-plugin/marketplace.json
-check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.2"' .claude-plugin/marketplace.json
+check marketplace-version jq -e '.plugins[]|select(.name=="autonomous-delivery")|.version=="0.3.3"' .claude-plugin/marketplace.json
 check README grep -q autonomous-delivery README.md
 check CLAUDE.md grep -q autonomous-delivery CLAUDE.md
 S=plugins/autonomous-delivery/skills/run-plan
@@ -46,6 +46,10 @@ check spec-plan-brief F "$R/reviewer.md" '## Spec and plan review'
 # G: parallel-safe units, own worktrees, shared environment serialized, claim checked by the reviewer
 check parallel-units F "$SK" 'Up to 3 units run at once when the plan marks them parallel-safe'
 check parallel-shared-env F "$SK" 'runs one at a time'
+check acceptance-checks-brief F "$R/reviewer.md" '## Acceptance checks review'
+check acceptance-checks-vacuous F "$R/reviewer.md" 'Vacuous pass'
+check acceptance-review-in-flow F "$SK" 'One opus reviewer that wrote no check reviews'
+check acceptance-review-before-freeze F "$R/acceptance.md" 'send the acceptance checks review'
 check parallel-claim-reviewed F "$R/reviewer.md" 'Parallel-safe claims'
 # A: exactly one opus unit review; second (fable) only by exception, reason recorded
 check unit-review-one F "$SK" 'exactly one opus review per unit PR'

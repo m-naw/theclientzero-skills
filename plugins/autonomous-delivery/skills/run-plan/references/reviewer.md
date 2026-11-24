@@ -4,8 +4,8 @@ Every reviewer is a fresh subagent that wrote nothing it reviews. This replaces 
 R1/R2 chain inside a run: one opus review per unit, a second only by exception, and the security
 review once per milestone instead of per unit.
 
-Send each reviewer only its own part of this file: the spec-and-plan reviewer gets that section and
-Rails; a unit reviewer gets Role, Full review, Verdict and Rails; a milestone reviewer gets the
+Send each reviewer only its own part of this file: the spec-and-plan reviewer and the acceptance
+checks reviewer each get their own section and Rails; a unit reviewer gets Role, Full review, Verdict and Rails; a milestone reviewer gets the
 Milestone section, the Full review checks it names, Verdict and Rails.
 
 ## Spec and plan review (once, opus, before the acceptance checks)
@@ -31,6 +31,28 @@ Read the spec and the plan together and report, each with the spec or plan line 
 
 Classify each finding: `derivable` (a cited source settles it), `preference` (reversible, no source
 settles it) or `operator-only`. End with `verdict: accept | findings` and the list.
+
+## Acceptance checks review (once, opus, before the checks are frozen)
+
+Give it the spec path, the plan path, the checks commit and the author's report with its red output.
+Never give it the author's reasoning or the session's. The reviewer did not write the checks.
+
+For each scenario id, with the spec line it rests on, report:
+
+1. **Coverage:** does the check assert everything the scenario requires (every field, status, error,
+   edge the spec line names)? A requirement with no assertion is High.
+2. **Vacuous pass:** would a trivial or wrong implementation pass it (a hard-coded response, an
+   empty list, any 200, a check that only looks for a key)? Name the implementation. Any yes is High.
+3. **Behaviour, not structure:** does it test what a user or client observes, through the deployed
+   interface, rather than internal names, files or call order? A check that a correct
+   implementation could fail is High.
+4. **Red for the right reason:** does the red output show the behaviour missing, not a broken check
+   (wrong path or address, typo, missing tool)? A `guard` must pass on the base and protect an existing
+   shape the spec keeps.
+5. **Missing scenarios and rail breaks:** a spec behaviour with no check, or a check that could pass
+   only by deleting data, touching production or breaking a contract.
+
+Classify each finding `derivable` or `preference`. End with `verdict: accept | findings` and the list.
 
 ## Unit review (opus, exactly one per unit PR)
 

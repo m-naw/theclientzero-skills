@@ -46,7 +46,10 @@ Report: the scenario ids with file and check name, the spec line each cites, whi
 
 When the author reports, confirm that its commit changes only check files
 (`git diff --name-only <base> <checks commit>`). If it changes anything else, discard the commit and
-send a fresh author. Then record in `state.md` the base commit, the red output, each check file's
+send a fresh author. Then send the acceptance checks review (`references/reviewer.md`). For
+`derivable` findings a fresh author fixes only the named ids, the checks run red on the base again,
+and the reviewer runs once more (up to 2 rounds). A `preference` or a finding still disputed after
+round 2 becomes a PROPOSED record under "Decided"; the review never blocks. Then record in `state.md` the base commit, the red output, each check file's
 `git hash-object` and each id's owning unit. The checks are now frozen.
 
 To re-freeze (Flow 3 says when): a fresh author subagent rewrites the named check ids and nothing

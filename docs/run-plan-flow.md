@@ -1,4 +1,4 @@
-# run-plan flow (v0.3.2)
+# run-plan flow (v0.3.3)
 
 ASCII map of `plugins/autonomous-delivery/skills/run-plan/SKILL.md`. `[if …]` = conditional,
 `(model)` = who does it, `⇒ ledger` = a "Waiting on you" item; the run continues.
@@ -31,6 +31,8 @@ ASCII map of `plugins/autonomous-delivery/skills/run-plan/SKILL.md`. `[if …]` 
 │ one check per scenario id, run vs deployed base → must FAIL (red)         │
 │ [if base already passes] keep only as named `guard`                       │
 │ [if base can't deploy] freeze as "red: not shown" ⇒ ledger               │
+│ checks review (opus, wrote no check): coverage, vacuous pass,             │
+│   behaviour not structure, red for the right reason; ≤2 rounds, no block  │
 │ FREEZE: hashes + owning unit → state.md                                   │
 └───────────────────────────────────────────────────────────────────────────┘
         ▼
