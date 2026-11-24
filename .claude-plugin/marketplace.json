@@ -59,6 +59,24 @@
         "diagnostic"
       ],
       "category": "process"
+    },
+    {
+      "name": "autonomous-delivery",
+      "source": "./plugins/autonomous-delivery",
+      "description": "Autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger.",
+      "version": "0.3.4",
+      "author": {
+        "name": "m-naw"
+      },
+      "repository": "https://github.com/m-naw/theclientzero-skills",
+      "keywords": [
+        "autonomous-delivery",
+        "deployment",
+        "verification",
+        "decision-ledger",
+        "governance"
+      ],
+      "category": "process"
     }
   ]
 }

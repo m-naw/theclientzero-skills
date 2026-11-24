@@ -1,0 +1,31 @@
+diff --git a/docs/acceptance/user-by-id.sh b/docs/acceptance/user-by-id.sh
+new file mode 100644
+index 0000000..efbf7d5
+--- /dev/null
++++ b/docs/acceptance/user-by-id.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++# Acceptance: GET /users/:id against the deployed test environment (APP_PORT).
++set -e
++node -e '
++const b = "http://127.0.0.1:" + process.env.APP_PORT;
++(async () => {
++  const ok = await fetch(b + "/users/1"); if (ok.status !== 200 || (await ok.json()).id !== 1) throw new Error("known id");
++  const no = await fetch(b + "/users/99999"); if (no.status !== 404 || (await no.json()).error !== "not_found") throw new Error("unknown id");
++})().catch(e => { console.error(e.message); process.exit(1); });'
+diff --git a/server.js b/server.js
+index b5fd1e7..9ed26a3 100644
+--- a/server.js
++++ b/server.js
+@@ -15,6 +15,11 @@ const server = http.createServer((req, res) => {
+   if (req.method === 'GET' && url.pathname === '/users') {
+     return send(res, 200, { users: load().map(({ id, name }) => ({ id, name })) });
+   }
++  const m = url.pathname.match(/^\/users\/(\d+)$/);
++  if (req.method === 'GET' && m) {
++    const u = load().find((x) => x.id === Number(m[1]));
++    return u ? send(res, 200, { id: u.id, name: u.name }) : send(res, 404, { error: 'not_found' });
++  }
+   send(res, 404, { error: 'not_found' });
+ });
+ 

@@ -60,6 +60,16 @@ The validated contract for worker agents in orchestrated pipelines: stay on your
 
 Ships a `PreToolUse` hook (`plugins/skill-observability/hooks/log-skill-call.sh`) that appends one JSON line to `.claude/skill-invocations.jsonl` per `Skill` tool call — the telemetry base for verifying that skills actually fire in your sessions. `jq` required; user-typed `/slash` invocations are not logged (different hook surface); subagent skill calls are logged with agent metadata. Honest status: in the one production deployment inspected, the hook had never shipped to the installed plugin and **no invocation telemetry exists anywhere yet** — install this plugin explicitly and verify a line appears in the log before trusting skill-fire claims.
 
+### `autonomous-delivery` plugin
+
+Autonomous delivery from an approved spec to deployed-and-verified, with an operator decision ledger (`plugins/autonomous-delivery/`).
+
+#### `run-plan`
+
+> Use when the operator has approved a spec and wants it delivered to deployed-and-verified without further input (`/run-plan <spec>`, resume with `/run-plan continue`).
+
+Reviews the spec and the plan together once (one independent opus reviewer; the spec is not assumed right), has an independent subagent write the spec's acceptance checks first (they must fail, then are frozen by hash), and implements unit by unit, grouped in milestones, with up to three parallel-safe units at once in their own worktrees. Each unit PR gets exactly one independent opus review (a second only by exception, with the reason recorded), is deployed to a test environment and passes acceptance and monitoring on its own head, and is owned until it merges: required checks are watched cheaply, a red check gets at most two bounded fixes, and by default (`merge: self`) the PR merges into the default branch; `merge: human` keeps an integration branch and one final pull request, and the run falls back to it when a merge into the default branch would deploy production or it cannot tell. Each milestone ends with a capstone and a security review. "Done" means it works after deploy, never just "merged". Reversible preferences are built provisionally and recorded with how to reverse them; operator-only actions (data deletion, production, money, client-facing, security exceptions) go to one ledger (`.run-plan/ledger.md`, "Waiting on you") while the rest of the work continues, and an operator answer that changes required behaviour re-freezes only the acceptance checks it affects, and one that explicitly approves an operator-only action authorizes exactly that action. The ledger and `.run-plan/state.md` name where the delivered work is (`## Delivered`: branch, PR, head commit). The session never asks questions, prints one progress line per unit and milestone, and does not stop for context: `state.md` (with milestone handoffs and Lessons) carries it across compaction. Project specifics live in an overlay: [`OVERLAY-TEMPLATE.md`](plugins/autonomous-delivery/skills/run-plan/OVERLAY-TEMPLATE.md). Eval (`evals/run-plan-delivery/`): v0.2 delivered 9/12 vs a no-skill baseline's 4/12 on the trap scenarios ([`FINDINGS.md`](evals/run-plan-delivery/FINDINGS.md)); v0.3 is not yet measured.
+
 ---
 
 ## Cost
@@ -94,6 +104,7 @@ In Claude Code:
 /plugin install confidence-protocols@theclientzero
 /plugin install git-discipline-in-managed-worktrees@theclientzero
 /plugin install skill-observability@theclientzero
+/plugin install autonomous-delivery@theclientzero
 ```
 
 Skills activate via the `Skill` tool — only when their trigger matches. To verify they actually fire, install `skill-observability` and check `.claude/skill-invocations.jsonl` after a session.
